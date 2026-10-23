@@ -45,6 +45,7 @@ function IRS:EnsureDB()
     IRSLiteDB = IRSLiteDB or {}
     self.db = IRSLiteDB
     local db = self.db
+    db.transferDebugLog = nil -- Remove the temporary live-deposit trace.
     db.schemaVersion = 2
     db.tracking = db.tracking or Ledger()
     db.characters = db.characters or {}

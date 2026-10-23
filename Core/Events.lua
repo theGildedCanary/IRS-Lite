@@ -73,6 +73,8 @@ events:SetScript("OnEvent", function(_, event, name)
         IRS.guildBankRuntime.isOpen = false
         IRS.guildBankRuntime.hasMoneyUpdate = false
     elseif event == "GUILDBANK_UPDATE_MONEY" then
+        -- Reloading with the bank already visible does not replay its OPENED event.
+        IRS.guildBankRuntime.isOpen = true
         IRS.guildBankRuntime.hasMoneyUpdate = true
         IRS:ScanGuildBankGold(true)
         RescanBanks()

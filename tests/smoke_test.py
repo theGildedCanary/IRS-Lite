@@ -401,6 +401,31 @@ beforeFailure=total();DepositGuildBankMoney(22000);money(-22000)
 guildGold=guildGold+22000;Event('GUILDBANK_UPDATE_MONEY');Advance(1.3)
 eq(total(),beforeFailure-22000)
 Event('GUILDBANKFRAME_CLOSED');Advance(31)
+-- Captured live order after /reload while the Guild Bank UI is already open:
+-- request -> bank update -> wallet update, with no GUILDBANKFRAME_OPENED event.
+addon:SetInternalGuildBank('guild:123',true)
+addon.guildBankRuntime.isOpen=false
+addon.guildBankRuntime.balance=nil
+addon.guildBankRuntime.key=nil
+Event('ADDON_LOADED','Blizzard_GuildBankUI')
+local before=addon:GetCurrentEarnings()
+local characterBefore=addon:GetCharacterEarnings()
+local movedBefore=addon:GetInternalTransferSummary().total
+DepositGuildBankMoney(10000)
+guildGold=guildGold+10000;Event('GUILDBANK_UPDATE_MONEY')
+money(-10000);Advance(2)
+for _,period in ipairs({'today','week','month','total'}) do
+    eq(addon:GetCurrentEarnings()[period],before[period],'live-order deposit preserves account '..period)
+    eq(addon:GetCharacterEarnings()[period],characterBefore[period],'live-order deposit preserves character '..period)
+end
+eq(addon:GetInternalTransferSummary().total,movedBefore+10000,'live-order deposit counted once')
+-- The explicit request also protects the wallet if the bank's update is delayed
+-- and there was no opening event to establish the runtime flag.
+addon.guildBankRuntime.isOpen=false
+local totalBeforeMissingEvent=total()
+WithdrawGuildBankMoney(10000);money(10000);Advance(2)
+eq(total(),totalBeforeMissingEvent,'withdrawal request does not require a replayed opening event')
+
 print('PASS: checked guild deposits/withdrawals, missing initial balance, delayed bank echoes, bank-first requests, failed requests, shared banks, and unrelated spending')
 print('PASS: cross-realm bank identity, legacy migration, latest balance, shared ownership, distinct namesakes, delayed guild ID, imported aliases, and transfer matching')
 print('PASS: appearance preset controls, saved state, live colors, default restoration, alert colors, import, font/history preservation')

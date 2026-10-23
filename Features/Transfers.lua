@@ -156,7 +156,6 @@ end
 -- as movement, and consume its later bank update only once.
 function IRS:TrackGuildBankAction(walletAmount)
     PruneRuntime()
-    if not IRS.guildBankRuntime.isOpen then return end
     if type(walletAmount) ~= "number" or walletAmount ~= walletAmount
         or math.abs(walletAmount) == math.huge or walletAmount == 0 then return end
     local key = IRS:RegisterCurrentGuildBank()

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.5
+
+- Fixed checked Guild Bank deposits being recorded as expenses after reloading while the bank window is already open.
+- Recognize explicit transfer requests without requiring the missed bank-open event; bank money updates restore the open state.
+- Added a regression test reproducing the live request/bank-update/wallet-update sequence.
+- Removed the temporary deposit diagnostics.
+
 ## 1.0.4
 
 - Fixed deposits to checked personal Guild Banks reducing earnings when the initial bank balance is unavailable.
