@@ -8,7 +8,7 @@ A standalone Retail edition with the original title bar and artwork, reduced to:
 - **Tools:** Lite user manual, Daily Income Adjustment, and Overall Income Adjustment.
 - **Settings:** Minimap Button, Transfers, main-window fonts, IRS Default / ElvUI Inspired appearance presets, and Import IRS files.
 
-Gold amounts are stored in copper. Earnings are observed wallet gains minus spending. Warband Bank transfers and transfers involving explicitly marked personal Guild Banks are filtered from earnings. Mailed and traded gold between characters cannot be identified automatically. Bank event timing may delay a ledger entry briefly. Use Tools to correct missed or misclassified changes.
+Gold amounts are stored in copper. Earnings are observed wallet gains minus spending. Warband Bank transfers and transfers involving explicitly marked personal Guild Banks are filtered from earnings. Mailed and traded gold between characters cannot be identified automatically. Checked guild-bank deposits and withdrawals are matched to their wallet changes even if the initial bank balance has not loaded. The corresponding bank update is consumed once, so it cannot exclude another transaction. Other bank event timing may delay a ledger entry briefly. Use Tools to correct missed or misclassified changes.
 
 ## Install and open
 
@@ -64,7 +64,7 @@ Live checks still needed: open each page, inspect fonts and the graph, toggle th
 
 The [GitHub repository](https://github.com/theGildedCanary/IRS-Lite) includes issue forms, Windows/Linux validation, and an install-package builder. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [release checklist](docs/RELEASE_CHECKLIST.md).
 
-`python scripts/package.py` creates `dist/IRS-Lite-1.0.3.zip`. The ZIP uses an explicit file list and the required `IRS Lite` install folder; tests, build dependencies, Git metadata, and saved records are excluded. Publishing a GitHub Release with a tag matching the TOC version runs validation and attaches the install package automatically.
+`python scripts/package.py` creates `dist/IRS-Lite-1.0.4.zip`. The ZIP uses an explicit file list and the required `IRS Lite` install folder; tests, build dependencies, Git metadata, and saved records are excluded. Publishing a GitHub Release with a tag matching the TOC version runs validation and attaches the install package automatically.
 
 ## License and credits
 

@@ -133,6 +133,8 @@ function IRS:ImportIRSFiles()
     -- Corrections for the previous Lite history must never touch the imported copy.
     self.internalTransferRuntime.recentRecordedWallet = {}
     self.internalTransferRuntime.pendingStorage = {}
+    self.internalTransferRuntime.guildActions = {}
+    self.internalTransferRuntime.guildActionReceipts = {}
     self:RegisterCurrentGuildBank()
     self:NormalizeGuildBanks()
     self:ApplySavedFontSizes()

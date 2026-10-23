@@ -39,6 +39,17 @@ GetGuildBankMoney = function() return guildGold end
 Enum={BankType={Account=2,Guild=3}}
 C_Bank={FetchDepositedMoney=function(kind) return kind==2 and warband or guildGold end,
     CanViewBank=function() return true end}
+DepositGuildBankMoney=function() end
+WithdrawGuildBankMoney=function() end
+C_Bank.DepositMoney=function() end
+C_Bank.WithdrawMoney=function() end
+function hooksecurefunc(target,name,hook)
+    if type(target)=='string' then target,name,hook=_G,target,name end
+    local original=target[name]
+    target[name]=function(...)
+        local result={original(...)};hook(...);return unpack(result)
+    end
+end
 C_DateAndTime={GetWeeklyResetStartTime=function() return 1792494000 end}
 local methods = {}
 for _, name in ipairs({'SetBackdropColor','SetBackdropBorderColor','SetTextColor','SetVertexColor','SetColorTexture'}) do
@@ -341,6 +352,56 @@ local before=total();money(-99000);guildGold=guildGold+99000
 Event('GUILDBANK_UPDATE_MONEY');Advance(1.3);eq(total(),before)
 Event('GUILDBANKFRAME_CLOSED')
 playerRealm,guildRealm,guildId='Realm','Realm',123
+-- Explicit transfer requests protect checked guilds when the first bank balance is unavailable.
+addon:SetInternalGuildBank('guild:123',true)
+Advance(31)
+guildGold=0;Event('GUILDBANKFRAME_OPENED')
+eq(addon.guildBankRuntime.balance,nil,'empty opening balance has not been confirmed')
+local before=total()
+local ignoredBefore=addon:GetInternalTransferSummary().total
+local periodsBefore,characterBefore=addon:GetCurrentEarnings(),addon:GetCharacterEarnings()
+DepositGuildBankMoney(250000)
+money(-250000);Advance(2)
+eq(total(),before,'deposit never reduces earnings while the bank update lags')
+for _,period in ipairs({'today','week','month','total'}) do
+    eq(addon:GetCurrentEarnings()[period],periodsBefore[period],'deposit preserves account '..period)
+    eq(addon:GetCharacterEarnings()[period],characterBefore[period],'deposit preserves character '..period)
+end
+guildGold=250000;Event('GUILDBANK_UPDATE_MONEY');Advance(1.1)
+eq(total(),before,'first bank snapshot does not charge the deposit')
+eq(addon:GetInternalTransferSummary().total,ignoredBefore+250000,'one transfer counted')
+-- Modern bank APIs and the eventual bank echo are also recognized exactly once.
+C_Bank.DepositMoney(Enum.BankType.Guild,300000);money(-300000)
+eq(total(),before)
+guildGold=guildGold+300000;Event('GUILDBANK_UPDATE_MONEY');Advance(1.1)
+eq(addon:GetInternalTransferSummary().total,ignoredBefore+550000)
+-- An ordinary expense at the open bank still subtracts from earnings.
+money(-17000);Advance(1.3);eq(total(),before-17000)
+C_Bank.WithdrawMoney(Enum.BankType.Guild,100000);money(100000)
+eq(total(),before-17000)
+guildGold=guildGold-100000;Event('GUILDBANK_UPDATE_MONEY');Advance(1.1)
+eq(total(),before-17000)
+-- Bank-first callbacks discard their request, so the next expense is not hidden.
+DepositGuildBankMoney(45000);guildGold=guildGold+45000;Event('GUILDBANK_UPDATE_MONEY')
+money(-45000);Advance(1.1);eq(total(),before-17000)
+money(-45000);Advance(1.3);eq(total(),before-62000)
+-- A failed request with no wallet change records nothing and expires.
+local beforeFailure=total();DepositGuildBankMoney(90000);Advance(4)
+money(-90000);Advance(1.3);eq(total(),beforeFailure-90000)
+-- Errors retire an attempted transfer before another same-size purchase arrives.
+beforeFailure=total();DepositGuildBankMoney(31000);Event('UI_ERROR_MESSAGE')
+money(-31000);Advance(1.3);eq(total(),beforeFailure-31000)
+-- Extra spending coalesced with a deposit must remain spending.
+beforeFailure=total();DepositGuildBankMoney(100000);money(-115000)
+guildGold=guildGold+100000;Event('GUILDBANK_UPDATE_MONEY');Advance(1.3)
+eq(total(),beforeFailure-15000)
+-- Unchecked guilds never gain request-based exclusions.
+addon:SetInternalGuildBank('guild:123',false)
+beforeFailure=total();DepositGuildBankMoney(22000);money(-22000)
+guildGold=guildGold+22000;Event('GUILDBANK_UPDATE_MONEY');Advance(1.3)
+eq(total(),beforeFailure-22000)
+Event('GUILDBANKFRAME_CLOSED');Advance(31)
+print('PASS: checked guild deposits/withdrawals, missing initial balance, delayed bank echoes, bank-first requests, failed requests, shared banks, and unrelated spending')
 print('PASS: cross-realm bank identity, legacy migration, latest balance, shared ownership, distinct namesakes, delayed guild ID, imported aliases, and transfer matching')
 print('PASS: appearance preset controls, saved state, live colors, default restoration, alert colors, import, font/history preservation')
 print('PASS: IRS preview, import, confirmation/cancel, source isolation, schema conversion, repeat import, invalid records, pending transfers')

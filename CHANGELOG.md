@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.4
+
+- Fixed deposits to checked personal Guild Banks reducing earnings when the initial bank balance is unavailable.
+- Match deposit/withdrawal requests to actual wallet changes and avoid processing their later bank updates twice.
+- Keep ordinary spending and unchecked-bank activity in the ledger; failed requests do not create transfers.
+- Added tests for all account/character period totals, missing initial balances, delayed bank updates, withdrawals, and failed requests.
+
 ## 1.0.3
 
 - Fixed duplicate guild-bank entries for characters in the same guild on different realms.

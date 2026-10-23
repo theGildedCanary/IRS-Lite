@@ -25,7 +25,7 @@ local function MergeGuildBank(db, oldKey, key)
     -- Pending matches must keep the same bank identity when its old key is adopted.
     local runtime = IRS.internalTransferRuntime
     if runtime then
-        for _, queue in ipairs({runtime.pendingWallet, runtime.pendingStorage, runtime.recentRecordedWallet}) do
+        for _, queue in ipairs({runtime.pendingWallet, runtime.pendingStorage, runtime.recentRecordedWallet, runtime.guildActions, runtime.guildActionReceipts}) do
             for _, entry in ipairs(queue) do
                 if entry.storageType == "guild" and entry.storageKey == oldKey then entry.storageKey = key end
                 if entry.expectedStorageType == "guild" and entry.expectedStorageKey == oldKey then entry.expectedStorageKey = key end

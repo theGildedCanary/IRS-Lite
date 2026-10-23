@@ -21,7 +21,7 @@ function IRS:HandleMoneyChange()
     self.walletBalance = current
     if previous == nil or previous == current then return end
     self:ScanWarbandGold()
-    local remaining = self:FilterInternalWalletChange(current - previous, self:CharacterKey())
+    local remaining = self:FilterInternalWalletChange(current - previous, self:CharacterKey(), previous)
     self:RecordEarnings(remaining, self:CharacterKey())
 end
 local function RescanBanks()
@@ -36,11 +36,12 @@ end
 local events = CreateFrame("Frame")
 for _, name in ipairs({"ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_MONEY", "ACCOUNT_MONEY",
     "BANKFRAME_OPENED", "BANKFRAME_CLOSED", "GUILDBANKFRAME_OPENED", "GUILDBANKFRAME_CLOSED",
-    "GUILDBANK_UPDATE_MONEY", "PLAYER_GUILD_UPDATE", "INITIAL_CLUBS_LOADED", "CLUB_ADDED", "CLUB_UPDATED", "PLAYER_LOGOUT"}) do
+    "GUILDBANK_UPDATE_MONEY", "PLAYER_GUILD_UPDATE", "INITIAL_CLUBS_LOADED", "CLUB_ADDED", "CLUB_UPDATED", "UI_ERROR_MESSAGE", "PLAYER_LOGOUT"}) do
     events:RegisterEvent(name)
 end
 events:SetScript("OnEvent", function(_, event, name)
     if event == "ADDON_LOADED" then
+        IRS:InstallGuildTransferHooks()
         if name ~= ADDON_NAME then return end
         IRS:EnsureDB()
         IRS:ApplySavedFontSizes()
@@ -79,6 +80,9 @@ events:SetScript("OnEvent", function(_, event, name)
         or event == "CLUB_ADDED" or event == "CLUB_UPDATED" then
         IRS:RegisterCurrentGuildBank()
         IRS:RefreshUI()
+    elseif event == "UI_ERROR_MESSAGE" then
+        -- Failed requests must not classify a later unrelated wallet change.
+        IRS.internalTransferRuntime.guildActions = {}
     elseif event == "PLAYER_LOGOUT" then
         -- Timers may not run during logout; commit unmatched pending wallet changes.
         for i = #IRS.internalTransferRuntime.pendingWallet, 1, -1 do

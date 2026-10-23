@@ -28,6 +28,8 @@ IRS.internalTransferRuntime = IRS.internalTransferRuntime or {
     pendingStorage = {},
     recentRecordedWallet = {},
     nextWalletId = 0,
+    guildActions = {},
+    guildActionReceipts = {},
 }
 local runtime = IRS.internalTransferRuntime
 runtime.pendingWallet = runtime.pendingWallet or {}
@@ -119,6 +121,12 @@ end
 local function PruneRuntime()
     local now = Now()
 
+    for _, queue in ipairs({runtime.guildActions, runtime.guildActionReceipts}) do
+        for i = #queue, 1, -1 do
+            if now - queue[i].at > queue[i].expiry then table.remove(queue, i) end
+        end
+    end
+
     for i = #runtime.pendingStorage, 1, -1 do
         local item = runtime.pendingStorage[i]
         if now - (tonumber(item.at) or 0) > STORAGE_EXPIRY
@@ -139,6 +147,84 @@ local function PruneRuntime()
         if (tonumber(item.amount) or 0) == 0
             or now - (tonumber(item.recordedAt) or 0) > LATE_MATCH_WINDOW then
             table.remove(runtime.recentRecordedWallet, i)
+        end
+    end
+end
+
+-- A confirmed wallet change can identify the player's requested guild transfer
+-- even when the initial bank balance is unavailable. Do not treat a request alone
+-- as movement, and consume its later bank update only once.
+function IRS:TrackGuildBankAction(walletAmount)
+    PruneRuntime()
+    if not IRS.guildBankRuntime.isOpen then return end
+    if type(walletAmount) ~= "number" or walletAmount ~= walletAmount
+        or math.abs(walletAmount) == math.huge or walletAmount == 0 then return end
+    local key = IRS:RegisterCurrentGuildBank()
+    if not key or not IRS:IsInternalGuildBank(key) or IRS.walletBalance == nil then return end
+    table.insert(runtime.guildActions, {
+        storageType = "guild", storageKey = key,
+        amount = math.floor(walletAmount), walletBefore = IRS.walletBalance,
+        characterKey = IRS:CharacterKey(), at = Now(), expiry = 3,
+    })
+end
+local function ConsumeGuildActions(walletAmount, characterKey, walletBefore, observedBankKey)
+    PruneRuntime()
+    local remaining = walletAmount
+    for i = #runtime.guildActions, 1, -1 do
+        local action = runtime.guildActions[i]
+        local sameBank = not observedBankKey or action.storageKey == observedBankKey
+        if sameBank and action.characterKey == characterKey
+            and IRS:IsInternalGuildBank(action.storageKey)
+            and (observedBankKey or action.walletBefore == walletBefore)
+            and remaining * action.amount > 0 and math.abs(remaining) >= math.abs(action.amount) then
+            remaining = remaining - action.amount
+            table.remove(runtime.guildActions, i)
+            if not observedBankKey then
+                IRS:RecordInternalTransfer(math.abs(action.amount))
+                table.insert(runtime.guildActionReceipts, {
+                    storageType = "guild", storageKey = action.storageKey,
+                    amount = -action.amount, at = Now(), expiry = 30,
+                })
+            end
+        end
+    end
+    return remaining
+end
+local function ConsumeGuildReceipts(storageKey, amount)
+    local remaining = amount
+    for i = #runtime.guildActionReceipts, 1, -1 do
+        local receipt = runtime.guildActionReceipts[i]
+        if receipt.storageKey == storageKey and remaining * receipt.amount > 0 then
+            local matched = math.min(math.abs(remaining), math.abs(receipt.amount))
+            local signed = remaining < 0 and -matched or matched
+            remaining, receipt.amount = remaining - signed, receipt.amount - signed
+            if receipt.amount == 0 then table.remove(runtime.guildActionReceipts, i) end
+        end
+    end
+    return remaining
+end
+function IRS:InstallGuildTransferHooks()
+    if not hooksecurefunc then return end
+    self._guildTransferHooks = self._guildTransferHooks or {}
+    local hooks = self._guildTransferHooks
+    for _, option in ipairs({{"DepositGuildBankMoney", -1}, {"WithdrawGuildBankMoney", 1}}) do
+        local name, sign = option[1], option[2]
+        if type(_G[name]) == "function" and not hooks[name] then
+            hooksecurefunc(name, function(amount)
+                if type(amount) == "number" then IRS:TrackGuildBankAction(amount * sign) end
+            end)
+            hooks[name] = true
+        end
+    end
+    for _, option in ipairs({{"DepositMoney", -1}, {"WithdrawMoney", 1}}) do
+        local name, sign = option[1], option[2]
+        if C_Bank and type(C_Bank[name]) == "function" and not hooks["C_Bank." .. name] then
+            hooksecurefunc(C_Bank, name, function(bankType, amount)
+                if Enum and Enum.BankType and bankType == Enum.BankType.Guild and type(amount) == "number" then
+                    IRS:TrackGuildBankAction(amount * sign)
+                end
+            end)
+            hooks["C_Bank." .. name] = true
         end
     end
 end
@@ -166,6 +252,9 @@ local function ConsumeStorage(walletAmount, characterKey, expectedType, expected
             )
 
             IRS:RecordInternalTransfer(matched)
+            if storage.storageType == "guild" then
+                ConsumeGuildActions(remaining < 0 and -matched or matched, characterKey, nil, storage.storageKey)
+            end
 
             if remaining < 0 then
                 remaining = remaining + matched
@@ -218,6 +307,9 @@ local function ConsumeLateRecordedStorage(storage)
             local correction = walletAmount < 0 and matched or -matched
             IRS:RecordEarnings(correction, wallet.characterKey, wallet.periodKeys)
             IRS:RecordInternalTransfer(matched)
+            if storage.storageType == "guild" then
+                ConsumeGuildActions(walletAmount < 0 and -matched or matched, wallet.characterKey, nil, storage.storageKey)
+            end
 
             if walletAmount < 0 then
                 wallet.amount = walletAmount + matched
@@ -328,6 +420,10 @@ function IRS:ObserveInternalStorageDelta(storageType, storageKey, amount)
     end
 
     PruneRuntime()
+    if storageType == "guild" then
+        amount = ConsumeGuildReceipts(storageKey, amount)
+        if amount == 0 then return true end
+    end
 
     local storage = {
         storageType = storageType,
@@ -355,6 +451,9 @@ function IRS:ObserveInternalStorageDelta(storageType, storageKey, amount)
             )
 
             IRS:RecordInternalTransfer(matched)
+            if storage.storageType == "guild" then
+                ConsumeGuildActions(walletAmount < 0 and -matched or matched, wallet.characterKey, nil, storage.storageKey)
+            end
 
             if walletAmount < 0 then
                 wallet.amount = walletAmount + matched
@@ -387,7 +486,8 @@ end
 
 function IRS:FilterInternalWalletChange(
     walletDelta,
-    characterKey
+    characterKey,
+    previousWallet
 )
     walletDelta = math.floor(tonumber(walletDelta) or 0)
     if walletDelta == 0 then return 0 end
@@ -402,6 +502,8 @@ function IRS:FilterInternalWalletChange(
         remaining,
         characterKey
     )
+
+    remaining = ConsumeGuildActions(remaining, characterKey, previousWallet)
 
     -- Guild Bank money often updates a fraction after PLAYER_MONEY. Defer the
     -- unmatched wallet change only while an OWNED Guild Bank is actually open.
