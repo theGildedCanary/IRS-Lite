@@ -307,7 +307,7 @@ assert '## SavedVariables: IRSLiteDB' in manifest
 assert set(loaded)=={str(p.relative_to(root)).replace('\\','/') for p in root.rglob('*.lua')}
 for name in ['IRSButton.tga','IRSTitleIcon.tga','fonts/2002.ttf','fonts/2002b.ttf']:
     assert (root/'Media'/name).is_file(),name
-for filename in loaded:
+for filename in [*loaded, 'README.md']:
     text=(root/filename).read_text(encoding='utf-8-sig')
     for broken in ['\u00e2', '\u00c3', '\u00c2', '\ufffd']:
         assert broken not in text,(filename,'corrupted text encoding')
