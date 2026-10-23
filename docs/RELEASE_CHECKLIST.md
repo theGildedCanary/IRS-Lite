@@ -9,6 +9,6 @@
 7. Disable the full addon and confirm Lite still loads and retains the imported records.
 8. Run `python scripts/package.py --version VERSION` and inspect the ZIP. Its top-level folder must be `IRS Lite`, with no saved data, credentials, test dependencies, or build tools.
 9. Push the reviewed source to GitHub and wait for the Validate workflow to pass.
-10. Create a GitHub Release with a tag such as `v1.0.2` matching the TOC version. Use the corresponding changelog entry as its description. Publishing the release runs validation again and attaches the install ZIP and SHA-256 checksum.
+10. Create a GitHub Release with a tag such as `v1.0.2` matching the TOC version. Use the corresponding changelog entry as its description. Publishing the release runs validation again and attaches only the install ZIP.
 
 GitHub's automatic source archives are development downloads. Users should install the `IRS-Lite-VERSION.zip` release asset to get the correct WoW folder name.

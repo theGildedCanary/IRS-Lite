@@ -31,10 +31,10 @@ jobs:
       - name: Build install ZIP
         if: runner.os == 'Linux'
         run: python scripts/package.py
-      - name: Save install ZIP and checksum
+      - name: Save install ZIP
         if: runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
           name: IRS-Lite-install
-          path: dist/*
+          path: dist/*.zip
           if-no-files-found: error

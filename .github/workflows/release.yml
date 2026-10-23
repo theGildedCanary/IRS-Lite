@@ -28,8 +28,8 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: python scripts/package.py --version "$RELEASE_TAG"
-      - name: Attach install ZIP and checksum
+      - name: Attach install ZIP
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: gh release upload "$RELEASE_TAG" dist/*.zip dist/*.sha256 --repo "$GITHUB_REPOSITORY"
+        run: gh release upload "$RELEASE_TAG" dist/*.zip --repo "$GITHUB_REPOSITORY"

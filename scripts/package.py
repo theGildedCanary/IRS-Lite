@@ -1,7 +1,6 @@
 """Build a reproducible WoW install archive from an explicit runtime allowlist."""
 from pathlib import Path
 import argparse
-import hashlib
 import re
 import zipfile
 
@@ -59,10 +58,7 @@ def build(output, requested_version=None):
         expected = {f'IRS Lite/{name}' for name in files}
         if set(archive.namelist()) != expected or archive.testzip() is not None:
             raise ValueError('The generated archive failed verification.')
-    digest = hashlib.sha256(target.read_bytes()).hexdigest()
-    checksum = target.with_suffix('.zip.sha256')
-    checksum.write_text(f'{digest}  {target.name}\n', encoding='ascii')
-    return target, checksum
+    return target
 
 
 if __name__ == '__main__':
@@ -71,7 +67,6 @@ if __name__ == '__main__':
     parser.add_argument('--output', type=Path, default=ROOT / 'dist')
     arguments = parser.parse_args()
     try:
-        for result in build(arguments.output, arguments.version):
-            print(result)
+        print(build(arguments.output, arguments.version))
     except ValueError as error:
         parser.error(str(error))
