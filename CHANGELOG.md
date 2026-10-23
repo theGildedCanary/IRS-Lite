@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.3
+
+- Fixed duplicate guild-bank entries for characters in the same guild on different realms.
+- Identify banks by the guild ID rather than the character realm.
+- Consolidate older entries as affected characters log in, preserving the personal-bank setting and latest known balance without adding duplicate balances.
+- Keep different guilds with identical names separate and normalize verified aliases after importing IRS records.
+- Publish only the install ZIP, without checksum attachments.
+
 ## 1.0.2
 
 - Added Settings > Profiles with IRS Default and ElvUI Inspired appearance presets.

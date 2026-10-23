@@ -36,7 +36,7 @@ DAILY GRAPH
 The graph shows the last seven calendar days, including today. Gains rise above zero; losses extend below zero. Empty days show zero. Today and This Month follow the local calendar; This Reset follows the game's weekly reset.
 
 TRANSFERS
-Wallet movements to and from the Warband Bank are excluded from earnings. In Settings > Transfers, mark personal Guild Banks to exclude their transfers too. Log in to a guild character to discover its bank, then open the bank before moving gold. Shared guild-bank movements remain earnings or spending. Matching may briefly defer a wallet change while a bank is open. Unmatched changes become normal earnings or spending. Mailed or traded gold between characters is not automatically identified as internal.
+Wallet movements to and from the Warband Bank are excluded from earnings. In Settings > Transfers, mark personal Guild Banks to exclude their transfers too. Characters in the same guild share one bank entry across realms. On upgrade, log into an affected character on each realm once to consolidate older entries. Open the bank before moving gold. Shared guild-bank movements remain earnings or spending. Matching may briefly defer a wallet change while a bank is open. Unmatched changes become normal earnings or spending. Mailed or traded gold between characters is not automatically identified as internal.
 
 ADJUSTMENTS
 Daily Income Adjustment adds a signed correction to the current character and account Today, This Reset, This Month, and Total Recorded, including today's graph bar. Overall Income Adjustment changes only account Total Recorded. Neither moves actual gold. Enter +500g or -500g; k and m suffixes are accepted.

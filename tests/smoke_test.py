@@ -30,9 +30,11 @@ wallet, warband, guildGold, player = 100000000, 50000000, 30000000, 'Tester'
 GetMoney = function() return wallet end
 UnitName = function() return player end
 UnitGUID = function() return 'Player-' .. player end
-GetRealmName = function() return 'Realm' end
+playerRealm, guildName, guildRealm, guildId = 'Realm', 'Test Guild', 'Realm', 123
+GetRealmName = function() return playerRealm end
+C_Club={GetGuildClubId=function() return guildId end}
 IsInGuild = function() return true end
-GetGuildInfo = function() return 'Test Guild',nil,nil,'Realm' end
+GetGuildInfo = function() return guildName,nil,nil,guildRealm end
 GetGuildBankMoney = function() return guildGold end
 Enum={BankType={Account=2,Guild=3}}
 C_Bank={FetchDepositedMoney=function(kind) return kind==2 and warband or guildGold end,
@@ -138,8 +140,8 @@ money(-600000);warband=warband+500000;Event('ACCOUNT_MONEY');Advance(1.3);eq(tot
 Event('BANKFRAME_CLOSED')
 Advance(3)
 -- Guild: default shared; explicit personal; deferred timeout and late reversal.
-assert(not addon:IsInternalGuildBank('Test Guild@Realm'))
-addon:SetInternalGuildBank('Test Guild@Realm',true)
+assert(not addon:IsInternalGuildBank('guild:123'))
+addon:SetInternalGuildBank('guild:123',true)
 Event('GUILDBANKFRAME_OPENED');Advance(1.1)
 before=total()
 guildGold=guildGold+400000;Event('GUILDBANK_UPDATE_MONEY');money(-400000);eq(total(),before)
@@ -175,7 +177,7 @@ local saved=IRSLiteDB;Event('ADDON_LOADED','IRS Lite');eq(IRSLiteDB,saved)
 eq(addon.FONT_STYLE_DEFAULTS.mini,nil)
 -- Stale cached guild balances cannot become matches on the next bank visit.
 Event('GUILDBANKFRAME_CLOSED');Advance(3)
-addon.db.guildBanks['Test Guild@Realm'].money=999999999
+addon.db.guildBanks['guild:123'].money=999999999
 guildGold=22222222
 local moved=addon:GetInternalTransferSummary().total
 Event('GUILDBANKFRAME_OPENED');Advance(1.1)
@@ -183,7 +185,7 @@ eq(addon:GetInternalTransferSummary().total,moved,'bank opening is a baseline')
 -- A guild-bank observation cannot consume a wallet change waiting on Warband storage.
 Event('GUILDBANKFRAME_CLOSED');Advance(3)
 Event('BANKFRAME_OPENED');money(-77000)
-addon:ObserveInternalStorageDelta('guild','Test Guild@Realm',77000)
+addon:ObserveInternalStorageDelta('guild','guild:123',77000)
 eq(#addon.internalTransferRuntime.pendingWallet,1,'matching bank identity')
 warband=warband+77000;Event('ACCOUNT_MONEY');Advance(1.3)
 eq(#addon.internalTransferRuntime.pendingWallet,0)
@@ -265,7 +267,7 @@ eq(addon.db.settings.showMinimapButton,false)
 eq(addon.db.internalTransfers.totalMoved,456);eq(addon.db.internalTransfers.events,nil)
 eq(addon.db.projects,nil);eq(addon.db.reserves,nil)
 assert(addon.db.guildBanks~=source.guildBanks)
-addon.db.guildBanks['Test Guild@Realm'].money=2;eq(source.guildBanks['Test Guild@Realm'].money,999)
+addon.db.guildBanks['guild:123'].money=2;eq(source.guildBanks['Test Guild@Realm'].money,999)
 addon:AdjustCurrentCharacterEarnings(10000)
 eq(source.tracking.totalEarned,7654321)
 eq(source.characters['Player-Tester'].earnedSinceTracking,123456)
@@ -293,6 +295,53 @@ cancel.scripts.OnClick();assert(not confirm:IsShown());eq(total(),before)
 importButton.scripts.OnClick();confirm.scripts.OnClick();eq(total(),7644321)
 IncomeRecordsSystemDB=nil
 addon:RefreshUI();assert(not importButton:IsEnabled())
+-- The same guild across character realms shares one bank, one flag, and one balance.
+Event('GUILDBANKFRAME_CLOSED');Advance(3)
+addon.db.guildBanks={
+    ['Test Guild@Moon Guard']={name='Test Guild',realm='Moon Guard',money=100000,lastSeen=10},
+    ['Test Guild@Earthen Ring']={name='Test Guild',realm='Earthen Ring',money=120000,lastSeen=20},
+}
+addon.db.guildBankAliases={}
+addon.db.internalTransfers.ownedGuildBanks={['Test Guild@Moon Guard']=true,['Test Guild@Earthen Ring']=true}
+local earningsBeforeMigration=total()
+playerRealm,guildRealm,guildId='Moon Guard',nil,123
+Event('PLAYER_LOGIN')
+eq(addon:GetCurrentGuildKey(),'guild:123')
+eq(addon.db.guildBanks['Test Guild@Moon Guard'],nil)
+assert(addon:IsInternalGuildBank('guild:123'))
+playerRealm='Earthen Ring';Event('PLAYER_LOGIN')
+eq(#addon:GetSortedGuildBanks(),1,'cross-realm guild has one row')
+eq(addon.db.guildBanks['guild:123'].money,120000,'keep latest balance, do not sum')
+eq(addon.db.guildBanks['Test Guild@Earthen Ring'],nil)
+assert(addon.db.guildBanks['guild:123'].realms['Moon Guard'])
+assert(addon.db.guildBanks['guild:123'].realms['Earthen Ring'])
+eq(total(),earningsBeforeMigration,'identity migration does not change earnings')
+addon:SetInternalGuildBank('guild:123',false)
+playerRealm='Moon Guard';Event('PLAYER_LOGIN');assert(not addon:IsInternalGuildBank('guild:123'))
+-- Namesakes with different stable guild IDs stay distinct, including on one realm.
+guildId=456;Event('PLAYER_LOGIN')
+eq(#addon:GetSortedGuildBanks(),2,'different guild IDs never merge by name')
+assert(not addon:IsInternalGuildBank('guild:456'))
+-- Do not create realm-based entries while the Clubs API is still initializing.
+playerRealm='Delayed Realm';guildId=nil;Event('PLAYER_LOGIN')
+eq(addon:GetCurrentGuildKey(),nil);eq(#addon:GetSortedGuildBanks(),2)
+addon.db.guildBanks['Test Guild@Delayed Realm']={name='Test Guild',money=0,lastSeen=30}
+guildId=123;Event('INITIAL_CLUBS_LOADED')
+eq(#addon:GetSortedGuildBanks(),2)
+eq(addon.db.guildBanks['guild:123'].money,0,'newest confirmed empty bank is retained')
+-- Imported legacy aliases already verified by past logins normalize without another login.
+addon.db.guildBanks['Test Guild@Earthen Ring']={name='Test Guild',money=500,lastSeen=40}
+addon:NormalizeGuildBanks()
+eq(addon.db.guildBanks['Test Guild@Earthen Ring'],nil)
+eq(addon.db.guildBanks['guild:123'].money,500)
+-- Transfers continue to match for alts regardless of the character realm.
+addon:SetInternalGuildBank('guild:123',true)
+playerRealm='Earthen Ring';Event('PLAYER_LOGIN');Event('GUILDBANKFRAME_OPENED');Advance(1.1)
+local before=total();money(-99000);guildGold=guildGold+99000
+Event('GUILDBANK_UPDATE_MONEY');Advance(1.3);eq(total(),before)
+Event('GUILDBANKFRAME_CLOSED')
+playerRealm,guildRealm,guildId='Realm','Realm',123
+print('PASS: cross-realm bank identity, legacy migration, latest balance, shared ownership, distinct namesakes, delayed guild ID, imported aliases, and transfer matching')
 print('PASS: appearance preset controls, saved state, live colors, default restoration, alert colors, import, font/history preservation')
 print('PASS: IRS preview, import, confirmation/cancel, source isolation, schema conversion, repeat import, invalid records, pending transfers')
 print('PASS: load order, isolated storage, net/account/character totals, adjustments, bank event orders, partial matches, late reversal, rollover, logout, chart history, navigation, fonts, stale cache and bank identity')

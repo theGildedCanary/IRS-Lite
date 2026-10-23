@@ -36,7 +36,7 @@ end
 local events = CreateFrame("Frame")
 for _, name in ipairs({"ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_MONEY", "ACCOUNT_MONEY",
     "BANKFRAME_OPENED", "BANKFRAME_CLOSED", "GUILDBANKFRAME_OPENED", "GUILDBANKFRAME_CLOSED",
-    "GUILDBANK_UPDATE_MONEY", "PLAYER_GUILD_UPDATE", "PLAYER_LOGOUT"}) do
+    "GUILDBANK_UPDATE_MONEY", "PLAYER_GUILD_UPDATE", "INITIAL_CLUBS_LOADED", "CLUB_ADDED", "CLUB_UPDATED", "PLAYER_LOGOUT"}) do
     events:RegisterEvent(name)
 end
 events:SetScript("OnEvent", function(_, event, name)
@@ -75,7 +75,8 @@ events:SetScript("OnEvent", function(_, event, name)
         IRS.guildBankRuntime.hasMoneyUpdate = true
         IRS:ScanGuildBankGold(true)
         RescanBanks()
-    elseif event == "PLAYER_GUILD_UPDATE" then
+    elseif event == "PLAYER_GUILD_UPDATE" or event == "INITIAL_CLUBS_LOADED"
+        or event == "CLUB_ADDED" or event == "CLUB_UPDATED" then
         IRS:RegisterCurrentGuildBank()
         IRS:RefreshUI()
     elseif event == "PLAYER_LOGOUT" then

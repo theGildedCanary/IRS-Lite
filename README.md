@@ -29,6 +29,10 @@ Import replaces Lite's history with a separate copy of IRS's account and charact
 
 WoW addons cannot browse SavedVariables files directly. The **Import IRS files** option reads the full addon's loaded records; **IncomeRecordsSystem** is an optional load-order dependency, so Lite still runs when the full addon is disabled or uninstalled. Until the full addon is enabled and its records are available, the import screen explains how to enable it. The full addon retains `/irs`.
 
+## Guild banks across realms
+
+Lite identifies each guild by its unique guild ID, so characters on different realms share one bank entry and one personal-bank setting. When upgrading from older versions, log into a guild character on each affected realm once to consolidate its old entry. The latest known balance is kept; duplicate balances are never added together. Different guilds with the same name remain separate.
+
 ## Appearance presets
 
 Open **Settings > Profiles** to choose **IRS Default** (warm brown and gold) or **ElvUI Inspired** (dark gray panels and neutral text). Presets apply immediately and persist across reloads and characters. ElvUI is not required. Switching presets preserves your font choices and all earnings history. Import IRS files also copies the selected appearance preset.
@@ -60,7 +64,7 @@ Live checks still needed: open each page, inspect fonts and the graph, toggle th
 
 The [GitHub repository](https://github.com/theGildedCanary/IRS-Lite) includes issue forms, Windows/Linux validation, and an install-package builder. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [release checklist](docs/RELEASE_CHECKLIST.md).
 
-`python scripts/package.py` creates `dist/IRS-Lite-1.0.2.zip`. The ZIP uses an explicit file list and the required `IRS Lite` install folder; tests, build dependencies, Git metadata, and saved records are excluded. Publishing a GitHub Release with a tag matching the TOC version runs validation and attaches the install package automatically.
+`python scripts/package.py` creates `dist/IRS-Lite-1.0.3.zip`. The ZIP uses an explicit file list and the required `IRS Lite` install folder; tests, build dependencies, Git metadata, and saved records are excluded. Publishing a GitHub Release with a tag matching the TOC version runs validation and attaches the install package automatically.
 
 ## License and credits
 

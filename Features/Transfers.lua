@@ -580,7 +580,11 @@ function IRS:RefreshInternalTransferSettingsSection()
         row.name:SetText(record.name or entry.key or "Guild Bank")
 
         local parts = {}
-        if record.realm then table.insert(parts, record.realm) end
+        local realms = {}
+        for realm in pairs(record.realms or {}) do realms[#realms + 1] = realm end
+        table.sort(realms)
+        if #realms > 0 then table.insert(parts, table.concat(realms, ", "))
+        elseif record.realm then table.insert(parts, record.realm) end
         if record.money ~= nil then
             table.insert(parts, IRS:FormatMoney(record.money, true))
         else

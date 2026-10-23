@@ -30,6 +30,10 @@ local function ValidateStorage(guildBanks, transfers)
     for key, bank in pairs(guildBanks) do
         assert(type(key) == "string" and type(bank) == "table", "IRS guild-bank records are invalid.")
         assert(bank.money == nil or Amount(bank.money), "IRS bank balance is invalid.")
+        assert(bank.realms == nil or type(bank.realms) == "table", "IRS bank realms are invalid.")
+        for realm, included in pairs(bank.realms or {}) do
+            assert(type(realm) == "string" and type(included) == "boolean", "IRS bank realms are invalid.")
+        end
         for _, field in ipairs({"name", "realm"}) do
             assert(bank[field] == nil or type(bank[field]) == "string", "IRS bank identity is invalid.")
         end
@@ -129,6 +133,8 @@ function IRS:ImportIRSFiles()
     -- Corrections for the previous Lite history must never touch the imported copy.
     self.internalTransferRuntime.recentRecordedWallet = {}
     self.internalTransferRuntime.pendingStorage = {}
+    self:RegisterCurrentGuildBank()
+    self:NormalizeGuildBanks()
     self:ApplySavedFontSizes()
     self:ApplySavedLayoutStyle()
     self:RefreshMinimapButton()

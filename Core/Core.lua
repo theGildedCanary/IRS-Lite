@@ -1,6 +1,43 @@
 -- IRS Lite: account and character net ledgers, stored in copper.
 local _, IRS = ...
 local function ServerNow() return GetServerTime and GetServerTime() or time() end
+-- Migrate only aliases verified by a login to that guild; names alone are not unique.
+local function MergeGuildBank(db, oldKey, key)
+    if oldKey == key then return end
+    local old, current = db.guildBanks[oldKey], db.guildBanks[key]
+    if old then
+        current = current or {key = key, name = old.name}
+        current.realms = current.realms or {}
+        if old.realm then current.realms[old.realm] = true end
+        for realm in pairs(old.realms or {}) do current.realms[realm] = true end
+        if old.money ~= nil and (current.money == nil
+            or (tonumber(old.lastSeen) or 0) > (tonumber(current.lastSeen) or 0)) then
+            current.money, current.lastSeen = old.money, old.lastSeen
+        end
+        db.guildBanks[key] = current
+        db.guildBanks[oldKey] = nil
+    end
+    local owned = db.internalTransfers and db.internalTransfers.ownedGuildBanks
+    if owned then
+        if owned[key] == nil then owned[key] = owned[oldKey] end
+        owned[oldKey] = nil
+    end
+    -- Pending matches must keep the same bank identity when its old key is adopted.
+    local runtime = IRS.internalTransferRuntime
+    if runtime then
+        for _, queue in ipairs({runtime.pendingWallet, runtime.pendingStorage, runtime.recentRecordedWallet}) do
+            for _, entry in ipairs(queue) do
+                if entry.storageType == "guild" and entry.storageKey == oldKey then entry.storageKey = key end
+                if entry.expectedStorageType == "guild" and entry.expectedStorageKey == oldKey then entry.expectedStorageKey = key end
+            end
+        end
+    end
+end
+function IRS:NormalizeGuildBanks()
+    for oldKey, key in pairs(self.db.guildBankAliases or {}) do
+        if oldKey ~= key then MergeGuildBank(self.db, oldKey, key) end
+    end
+end
 local function Ledger()
     return {days = {}, weeks = {}, months = {}, total = 0}
 end
@@ -8,10 +45,11 @@ function IRS:EnsureDB()
     IRSLiteDB = IRSLiteDB or {}
     self.db = IRSLiteDB
     local db = self.db
-    db.schemaVersion = 1
+    db.schemaVersion = 2
     db.tracking = db.tracking or Ledger()
     db.characters = db.characters or {}
     db.guildBanks = db.guildBanks or {}
+    db.guildBankAliases = db.guildBankAliases or {}
     db.settings = db.settings or {showMinimapButton = true}
     db.settings.fontSizes = db.settings.fontSizes or {main = {}}
     db.settings.fontSizes.main = db.settings.fontSizes.main or {}
@@ -84,6 +122,7 @@ function IRS:GetRecentDailyEarnings(count)
     return results
 end
 function IRS:GetSortedGuildBanks()
+    self:NormalizeGuildBanks()
     local rows = {}
     for key, record in pairs(self.db.guildBanks) do rows[#rows + 1] = {key = key, record = record} end
     table.sort(rows, function(a,b) return (a.record.name or a.key) < (b.record.name or b.key) end)
@@ -128,28 +167,41 @@ end
 
 function IRS:GetCurrentGuildKey()
     if not IsInGuild or not IsInGuild() then return nil end
-    local guildName, guildRealm
-    if GetGuildInfo then
-        local name, _, _, realm = GetGuildInfo("player")
-        guildName, guildRealm = name, realm
-    end
-    if not guildName or guildName == "" then return nil end
-    local realm = guildRealm or (GetRealmName and GetRealmName()) or "Unknown"
-    return guildName .. "@" .. realm, guildName, realm
+    local name, _, _, realm = GetGuildInfo("player")
+    if not name or name == "" then return nil end
+    -- Club IDs identify a guild across realms and survive guild renames.
+    local ok, id
+    if C_Club and C_Club.GetGuildClubId then ok, id = pcall(C_Club.GetGuildClubId) end
+    if not ok or id == nil or id == "" or id == 0 then return nil end
+    return "guild:" .. tostring(id), name, realm, tostring(id)
 end
 
--- Discover guild membership before a bank has been opened.
--- Unknown balances stay nil until a successful bank scan.
+-- Old realm keys are adopted only on a character whose live guild ID proves the alias.
 function IRS:RegisterCurrentGuildBank()
-    if not IRS.db then IRS:EnsureDB() end
-    local key, name, realm = IRS:GetCurrentGuildKey()
+    if not self.db then self:EnsureDB() end
+    local key, name, realm, id = self:GetCurrentGuildKey()
     if not key then return nil end
-
-    local record = IRS.db.guildBanks[key] or {}
-    IRS.db.guildBanks[key] = record
-    record.key = key
-    record.name = name
-    record.realm = realm
+    local db = self.db
+    local playerRealm = GetRealmName()
+    for _, knownRealm in ipairs({playerRealm, realm}) do
+        if knownRealm and knownRealm ~= "" then
+            local oldKey = name .. "@" .. knownRealm
+            local previousAlias = db.guildBankAliases[oldKey]
+            -- Another guild with the same name must retain its own identity/settings.
+            if not previousAlias or previousAlias == key then
+                db.guildBankAliases[oldKey] = key
+                MergeGuildBank(db, oldKey, key)
+            end
+        end
+    end
+    local record = db.guildBanks[key] or {}
+    db.guildBanks[key] = record
+    record.key, record.name, record.guildClubId = key, name, id
+    record.realm = realm or record.realm
+    record.realms = record.realms or {}
+    if playerRealm then record.realms[playerRealm] = true end
+    if realm then record.realms[realm] = true end
+    self:NormalizeGuildBanks()
     return key, record
 end
 
@@ -220,8 +272,8 @@ function IRS:ScanGuildBankGold(confirmedUpdate)
     -- Opening can briefly report zero before the bank's money update arrives.
     if amount == 0 and not runtime.hasMoneyUpdate then return end
     -- Match only observations from this bank visit, never a stale saved balance.
-    local previous = runtime.balance
-    runtime.balance = amount
+    local previous = runtime.key == key and runtime.balance or nil
+    runtime.key, runtime.balance = key, amount
     record.money = amount
     record.lastSeen = ServerNow()
     if confirmedUpdate and previous ~= nil and previous ~= amount then
