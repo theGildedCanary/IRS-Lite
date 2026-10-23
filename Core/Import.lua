@@ -76,6 +76,7 @@ local function Build(source)
     local settings = source.settings or {}
     snapshot.settings.showMinimapButton = settings.showMinimapButton ~= false
     snapshot.settings.fontFace = settings.fontFace or "default"
+    snapshot.settings.layoutStyle = settings.layoutStyle == "elvui" and "elvui" or "default"
     snapshot.settings.fontSizes = {main = {}}
     for key, default in pairs(IRS.FONT_STYLE_DEFAULTS.main) do
         local value = settings.fontSizes and settings.fontSizes.main and settings.fontSizes.main[key]
@@ -129,6 +130,7 @@ function IRS:ImportIRSFiles()
     self.internalTransferRuntime.recentRecordedWallet = {}
     self.internalTransferRuntime.pendingStorage = {}
     self:ApplySavedFontSizes()
+    self:ApplySavedLayoutStyle()
     self:RefreshMinimapButton()
     self:RefreshUI()
     return true, string.format("Imported %d characters and %d days of IRS earnings. Lite now saves its own copy.", snapshot.characterCount, snapshot.dayCount)

@@ -44,6 +44,7 @@ events:SetScript("OnEvent", function(_, event, name)
         if name ~= ADDON_NAME then return end
         IRS:EnsureDB()
         IRS:ApplySavedFontSizes()
+        IRS:ApplySavedLayoutStyle()
         IRS:RestoreWindow()
         IRS:RefreshMinimapButton()
     elseif event == "PLAYER_LOGIN" then

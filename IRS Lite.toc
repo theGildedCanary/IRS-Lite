@@ -2,12 +2,13 @@
 ## Title: IRS Lite — Income Records System
 ## Notes: Account-wide net earnings, daily chart, adjustments, and internal-transfer filtering.
 ## Author: Gilded Canary
-## Version: 1.0.1
+## Version: 1.0.2
 ## IconTexture: Interface\AddOns\IRS Lite\Media\IRSButton
 ## SavedVariables: IRSLiteDB
 ## OptionalDeps: IncomeRecordsSystem
 
 Core\Core.lua
+UI\LayoutStyle.lua
 Core\Fonts.lua
 Core\Import.lua
 Features\Transfers.lua

@@ -7,7 +7,7 @@ local function Text(parent, style, x, y, width, content)
     fs:SetPoint("TOPLEFT", x, y)
     fs:SetWidth(width)
     fs:SetJustifyH("LEFT")
-    fs:SetTextColor(0.88, 0.84, 0.75)
+    IRS:SetLayoutColor(fs, "SetTextColor", 0.88, 0.84, 0.75)
     fs:SetText(content)
     return fs
 end
@@ -22,7 +22,7 @@ local function Button(parent, label, x, y, width, callback)
 end
 Text(page, "page", 4, -4, 800, "SETTINGS")
 local sections = {}
-for _, key in ipairs({"minimap", "transfers", "fonts", "import"}) do
+for _, key in ipairs({"minimap", "transfers", "fonts", "profiles", "import"}) do
     local section = CreateFrame("Frame", nil, page)
     section:SetPoint("TOPLEFT", 0, -84)
     section:SetPoint("BOTTOMRIGHT", 0, 0)
@@ -35,9 +35,9 @@ function IRS:SelectSettingsSection(key)
     for name, section in pairs(sections) do section:SetShown(name == key) end
     self:RefreshSettingsPage()
 end
-for i, entry in ipairs({{"minimap", "MINIMAP BUTTON"}, {"transfers", "TRANSFERS"}, {"fonts", "FONTS"}, {"import", "IMPORT"}}) do
+for i, entry in ipairs({{"minimap", "MINIMAP BUTTON"}, {"transfers", "TRANSFERS"}, {"fonts", "FONTS"}, {"profiles", "PROFILES"}, {"import", "IMPORT"}}) do
     local key = entry[1]
-    Button(page, entry[2], 4 + (i-1)*186, -44, 176, function() IRS:SelectSettingsSection(key) end)
+    Button(page, entry[2], 4 + (i-1)*174, -44, 164, function() IRS:SelectSettingsSection(key) end)
 end
 local check = CreateFrame("CheckButton", nil, sections.minimap, "UICheckButtonTemplate")
 check:SetPoint("TOPLEFT", 12, -18)
@@ -83,9 +83,21 @@ for i, style in ipairs(IRS.FONT_STYLE_ORDER.main) do
     fields[key] = field
 end
 Button(fonts, "RESET FONT SIZES", 16, -308, 220, function() IRS:ResetFontSizes("main") end)
+local profiles = sections.profiles
+Text(profiles, "section", 16, -12, 800, "APPEARANCE PRESETS")
+Text(profiles, "body", 16, -48, 800, "Choose the original warm IRS palette or the dark ElvUI Inspired palette. Changes apply immediately and are saved across characters. ElvUI is not required.")
+local profileButtons = {}
+for i, option in ipairs(IRS.LAYOUT_STYLE_OPTIONS) do
+    local key = option.key
+    profileButtons[i] = Button(profiles, option.label, 16 + (i-1)*270, -108, 250, function()
+        IRS:SetLayoutStyle(key)
+    end)
+end
+local profileSelection = Text(profiles, "body", 16, -160, 800, "")
+Text(profiles, "helper", 16, -204, 800, "Appearance presets change panel, border, and text colors. Your earnings and font preferences are preserved.")
 local importPage = sections["import"]
 Text(importPage, "section", 16, -12, 800, "IMPORT IRS FILES")
-Text(importPage, "body", 16, -48, 800, "Copy IRS earnings history, character totals, transfer settings, and fonts into Lite. This replaces Lite's current history. Your original IRS records stay unchanged.")
+Text(importPage, "body", 16, -48, 800, "Copy IRS earnings history, character totals, transfer settings, fonts, and appearance into Lite. This replaces Lite's current history. Your original IRS records stay unchanged.")
 local importSummary = Text(importPage, "body", 16, -110, 800, "")
 local importStatus = Text(importPage, "helper", 16, -278, 800, "")
 local confirmation = Text(importPage, "body", 16, -210, 800, "Replace Lite history with the IRS records shown above?")
@@ -128,6 +140,11 @@ function IRS:RefreshSettingsPage()
     local _, _, selected = self:GetFontFace()
     for i, button in ipairs(faces) do
         button:SetEnabled(self.FONT_FACE_OPTIONS[i].key ~= selected)
+    end
+    local selectedProfile = self:GetLayoutStyle()
+    profileSelection:SetText("Current preset: " .. self:GetLayoutStyleLabel())
+    for i, button in ipairs(profileButtons) do
+        button:SetEnabled(self.LAYOUT_STYLE_OPTIONS[i].key ~= selectedProfile)
     end
     self:RefreshInternalTransferSettingsSection()
     RefreshImport()

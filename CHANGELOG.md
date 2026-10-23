@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.2
+
+- Added Settings > Profiles with IRS Default and ElvUI Inspired appearance presets.
+- Apply presets immediately, restore saved choices on reload, and retain font settings and earnings.
+- Copy the appearance preset when importing full IRS records.
+- Added regression checks for color restoration, saved presets, and imported appearance.
+
 ## 1.0.1
 
 Initial GitHub release of IRS Lite.

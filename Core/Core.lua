@@ -91,7 +91,6 @@ function IRS:GetSortedGuildBanks()
 end
 IRS.guildBankRuntime = {isOpen = false}
 IRS.warbandBankRuntime = {isOpen = false}
-function IRS:SetLayoutColor(region, method, ...) region[method](region, ...) end
 function IRS:StyleButtonFeedback(button)
     local highlight = button:CreateTexture(nil, "HIGHLIGHT")
     highlight:SetAllPoints(button)

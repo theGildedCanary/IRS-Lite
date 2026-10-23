@@ -39,6 +39,10 @@ C_Bank={FetchDepositedMoney=function(kind) return kind==2 and warband or guildGo
     CanViewBank=function() return true end}
 C_DateAndTime={GetWeeklyResetStartTime=function() return 1792494000 end}
 local methods = {}
+for _, name in ipairs({'SetBackdropColor','SetBackdropBorderColor','SetTextColor','SetVertexColor','SetColorTexture'}) do
+    local method=name
+    methods[method]=function(self,...) self.colors[method]={...} end
+end
 function methods:SetScript(event, fn) self.scripts[event]=fn end
 function methods:HookScript(event,fn)
     local old=self.scripts[event]
@@ -83,7 +87,7 @@ local mt={__index=function(t,key)
     return nil
 end}
 function CreateFrame(kind,name,parent,template)
-    local f=setmetatable({kind=kind,name=name,parent=parent,scripts={},events={}},mt)
+    local f=setmetatable({kind=kind,name=name,parent=parent,scripts={},events={},colors={}},mt)
     if name then _G[name]=f end
     frames[#frames+1]=f
     return f
@@ -197,6 +201,41 @@ eq(addon:GetCurrentEarnings().today,0)
 eq(addon:GetCurrentEarnings().week,0)
 eq(addon:GetCurrentEarnings().month,0)
 eq(total(),historicalTotal)
+-- Appearance presets update existing regions and restore their exact default colors.
+local historyBeforeProfile=total()
+local bodySizeBeforeProfile=addon:GetFontSize('main','body')
+eq(addon:GetLayoutStyle(),'default')
+eq(addon.mainFrame.colors.SetBackdropColor[1],0.165)
+assert(addon:SetLayoutStyle('elvui'))
+eq(addon.db.settings.layoutStyle,'elvui')
+eq(addon:GetLayoutStyleLabel(),'ElvUI Inspired')
+eq(addon.mainFrame.colors.SetBackdropColor[1],0.025)
+eq(addon.mainFrame.colors.SetBackdropColor[4],0.72)
+addon:SelectSettingsSection('profiles')
+local defaultProfile,elvuiProfile
+for _,f in ipairs(frames) do
+    if f.text=='IRS Default' then defaultProfile=f end
+    if f.text=='ElvUI Inspired' then elvuiProfile=f end
+end
+assert(defaultProfile and elvuiProfile)
+assert(defaultProfile:IsEnabled() and not elvuiProfile:IsEnabled())
+defaultProfile.scripts.OnClick()
+eq(addon.mainFrame.colors.SetBackdropColor[1],0.165)
+eq(addon.mainFrame.colors.SetBackdropColor[4],0.92)
+assert(not defaultProfile:IsEnabled() and elvuiProfile:IsEnabled())
+assert(not addon:SetLayoutStyle('missing'))
+eq(addon:GetLayoutStyle(),'default')
+-- Unmapped alert colors are retained when a previously themed row is reused.
+local probe=CreateFrame('Frame')
+addon:SetLayoutColor(probe,'SetBackdropColor',0.190,0.145,0.098,0.88)
+addon:SetLayoutStyle('elvui');eq(probe.colors.SetBackdropColor[1],0.035)
+addon:SetLayoutColor(probe,'SetBackdropColor',0.63,0.29,0.25,0.5)
+addon:SetLayoutStyle('default');eq(probe.colors.SetBackdropColor[1],0.63)
+addon.db.settings.layoutStyle='elvui';Event('ADDON_LOADED','IRS Lite')
+eq(addon.mainFrame.colors.SetBackdropColor[1],0.025,'saved preset applies on load')
+eq(total(),historyBeforeProfile,'profiles preserve earnings')
+eq(addon:GetFontSize('main','body'),bodySizeBeforeProfile,'profiles preserve fonts')
+addon:SetLayoutStyle('default')
 -- IRS import is manual, replaces rather than adds, and copies all supported periods.
 assert(addon:GetIRSImportPreview()==nil)
 local day,week,month=addon:GetPeriodKeys()
@@ -208,7 +247,7 @@ IncomeRecordsSystemDB={
         periodEarnings={days={[day]=-12500},weeks={[week]=20000},months={[month]=40000}}}},
     guildBanks={['Test Guild@Realm']={name='Test Guild',money=999}},
     internalTransfers={ownedGuildBanks={['Test Guild@Realm']=true},days={[day]=123},totalMoved=456,events={{amount=42}}},
-    settings={showMinimapButton=false,fontFace='arial',fontSizes={main={body=13},mini={body=39}}},
+    settings={showMinimapButton=false,fontFace='arial',layoutStyle='elvui',fontSizes={main={body=13},mini={body=39}}},
     projects={items={sentinel=true}},reserves={sentinel=true},
 }
 local source=IncomeRecordsSystemDB
@@ -221,6 +260,7 @@ eq(addon:GetCurrentEarnings().week,25000);eq(addon:GetCurrentEarnings().month,50
 eq(addon:GetCharacterEarnings().total,123456);eq(addon:GetCharacterEarnings().today,-12500)
 eq(addon:GetRecentDailyEarnings(7)[7].amount,-12500)
 eq(addon.db.settings.fontFace,'arial');eq(addon:GetFontSize('main','body'),13)
+eq(addon:GetLayoutStyle(),'elvui');eq(addon.mainFrame.colors.SetBackdropColor[1],0.025)
 eq(addon.db.settings.showMinimapButton,false)
 eq(addon.db.internalTransfers.totalMoved,456);eq(addon.db.internalTransfers.events,nil)
 eq(addon.db.projects,nil);eq(addon.db.reserves,nil)
@@ -229,7 +269,7 @@ addon.db.guildBanks['Test Guild@Realm'].money=2;eq(source.guildBanks['Test Guild
 addon:AdjustCurrentCharacterEarnings(10000)
 eq(source.tracking.totalEarned,7654321)
 eq(source.characters['Player-Tester'].earnedSinceTracking,123456)
-eq(source.settings.fontSizes.main.body,13) -- Original main font setting is kept intact.
+eq(source.settings.layoutStyle,'elvui');eq(source.settings.fontSizes.main.body,13) -- Original main font setting is kept intact.
 local repeated=addon:ImportIRSFiles();assert(repeated);eq(total(),7644321,'repeat import replaces without doubling')
 -- Invalid source history cannot partially replace Lite data.
 local before=addon.db.tracking
@@ -253,6 +293,7 @@ cancel.scripts.OnClick();assert(not confirm:IsShown());eq(total(),before)
 importButton.scripts.OnClick();confirm.scripts.OnClick();eq(total(),7644321)
 IncomeRecordsSystemDB=nil
 addon:RefreshUI();assert(not importButton:IsEnabled())
+print('PASS: appearance preset controls, saved state, live colors, default restoration, alert colors, import, font/history preservation')
 print('PASS: IRS preview, import, confirmation/cancel, source isolation, schema conversion, repeat import, invalid records, pending transfers')
 print('PASS: load order, isolated storage, net/account/character totals, adjustments, bank event orders, partial matches, late reversal, rollover, logout, chart history, navigation, fonts, stale cache and bank identity')
 ''')
@@ -260,7 +301,7 @@ print('PASS: load order, isolated storage, net/account/character totals, adjustm
 # Validate install assets and prevent accidentally restoring excluded feature modules.
 manifest=(root/'IRS Lite.toc').read_text(encoding='utf-8-sig')
 loaded=[line.replace('\\','/') for line in manifest.splitlines() if line.endswith('.lua')]
-assert len(loaded)==8
+assert len(loaded)==9
 assert '## OptionalDeps: IncomeRecordsSystem' in manifest
 assert '## SavedVariables: IRSLiteDB' in manifest
 assert set(loaded)=={str(p.relative_to(root)).replace('\\','/') for p in root.rglob('*.lua')}

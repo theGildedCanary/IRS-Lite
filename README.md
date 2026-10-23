@@ -6,7 +6,7 @@ A standalone Retail edition with the original title bar and artwork, reduced to:
 
 - **Dashboard:** Today, This Reset, This Month, Total Recorded, current-character subtotals, and the seven-day daily earnings bar graph.
 - **Tools:** Lite user manual, Daily Income Adjustment, and Overall Income Adjustment.
-- **Settings:** Minimap Button, Transfers, main-window fonts, and Import IRS files.
+- **Settings:** Minimap Button, Transfers, main-window fonts, IRS Default / ElvUI Inspired appearance presets, and Import IRS files.
 
 Gold amounts are stored in copper. Earnings are observed wallet gains minus spending. Warband Bank transfers and transfers involving explicitly marked personal Guild Banks are filtered from earnings. Mailed and traded gold between characters cannot be identified automatically. Bank event timing may delay a ledger entry briefly. Use Tools to correct missed or misclassified changes.
 
@@ -25,28 +25,33 @@ Lite uses **IRSLiteDB**, its own account-wide SavedVariables database. To copy e
 3. Click **Import IRS files**, review the available character/day counts and total, then confirm **Replace Lite history**.
 4. Disable the full addon afterward if you only want to run Lite.
 
-Import replaces Lite's history with a separate copy of IRS's account and character totals, daily/reset/monthly earnings, overall correction, known guild banks, transfer settings, minimap preference, and main fonts. It does not add the totals together, and it never changes IRS's original records. Imports are manual; the editions save independently afterward. Projects, reserves, reports, and mini dashboard data are excluded. Main font sizes are limited to the sizes Lite supports.
+Import replaces Lite's history with a separate copy of IRS's account and character totals, daily/reset/monthly earnings, overall correction, known guild banks, transfer settings, minimap preference, main fonts, and appearance preset. It does not add the totals together, and it never changes IRS's original records. Imports are manual; the editions save independently afterward. Projects, reserves, reports, and mini dashboard data are excluded. Main font sizes are limited to the sizes Lite supports.
 
 WoW addons cannot browse SavedVariables files directly. The **Import IRS files** option reads the full addon's loaded records; **IncomeRecordsSystem** is an optional load-order dependency, so Lite still runs when the full addon is disabled or uninstalled. Until the full addon is enabled and its records are available, the import screen explains how to enable it. The full addon retains `/irs`.
+
+## Appearance presets
+
+Open **Settings > Profiles** to choose **IRS Default** (warm brown and gold) or **ElvUI Inspired** (dark gray panels and neutral text). Presets apply immediately and persist across reloads and characters. ElvUI is not required. Switching presets preserves your font choices and all earnings history. Import IRS files also copies the selected appearance preset.
 
 ## Organization
 
 | File | Responsibility |
 | --- | --- |
 | `Core/Core.lua` | Database, account/character net ledgers, period keys, guild-bank reads, money formatting |
+| `UI/LayoutStyle.lua` | Saved appearance presets and live color updates |
 | `Core/Fonts.lua` | Font faces, semantic sizes, live updates |
 | `Core/Import.lua` | Manual IRS history preview, conversion, and independent copy |
 | `Core/Events.lua` | Login, money/bank events, slash commands |
 | `Features/Transfers.lua` | Transfer matching and personal guild-bank settings |
 | `Features/Tools.lua` | Manual and earnings corrections |
 | `UI/UI.lua` | Title bar, navigation, dashboard, graph, minimap button |
-| `UI/Settings.lua` | Minimap, Transfers, Fonts, and Import settings |
+| `UI/Settings.lua` | Minimap, Transfers, Fonts, Profiles, and Import settings |
 
-Only these eight Lua modules load. Lite contains no projects, reserves, token market, mini dashboard, reports, auction-mail classification, statistics scanning, contributor page, or startup timing instrumentation. Transfer matching retains short-lived runtime queues for different bank/wallet event orders and late corrections. Deferred entries keep their original day/reset/month keys.
+Only these nine Lua modules load. Lite contains no projects, reserves, token market, mini dashboard, reports, auction-mail classification, statistics scanning, contributor page, or startup timing instrumentation. Transfer matching retains short-lived runtime queues for different bank/wallet event orders and late corrections. Deferred entries keep their original day/reset/month keys.
 
 ## Validation
 
-Install the test dependencies with `python -m pip install -r requirements-dev.txt`, then run `python scripts/validate.py`. The regression harness uses `lupa` with Lua 5.1. It simulates WoW's APIs and checks module loading, namespace isolation, account and character earnings, corrections, bank event orders, partial matches, late transfer reversals, date rollover, pending-entry logout, page navigation, and fonts. Import checks cover schema conversion, source isolation, confirmation/cancel, repeat imports, invalid history, and pending bank events. The harness does not modify WoW or saved records.
+Install the test dependencies with `python -m pip install -r requirements-dev.txt`, then run `python scripts/validate.py`. The regression harness uses `lupa` with Lua 5.1. It simulates WoW's APIs and checks module loading, namespace isolation, account and character earnings, corrections, bank event orders, partial matches, late transfer reversals, date rollover, pending-entry logout, page navigation, fonts, and appearance presets. Import checks cover schema conversion, source isolation, confirmation/cancel, repeat imports, invalid history, and pending bank events. The harness does not modify WoW or saved records.
 
 Live checks still needed: open each page, inspect fonts and the graph, toggle the minimap setting, then deposit and withdraw gold from the Warband Bank and a marked personal Guild Bank. Confirm earnings stay unchanged for internal transfers, then make a purchase and confirm earnings decrease.
 
@@ -55,7 +60,7 @@ Live checks still needed: open each page, inspect fonts and the graph, toggle th
 
 The [GitHub repository](https://github.com/theGildedCanary/IRS-Lite) includes issue forms, Windows/Linux validation, and an install-package builder. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [release checklist](docs/RELEASE_CHECKLIST.md).
 
-`python scripts/package.py` creates `dist/IRS-Lite-1.0.1.zip` and its SHA-256 checksum. The ZIP uses an explicit file list and the required `IRS Lite` install folder; tests, build dependencies, Git metadata, and saved records are excluded. Publishing a GitHub Release with a tag matching the TOC version runs validation and attaches the install package automatically.
+`python scripts/package.py` creates `dist/IRS-Lite-1.0.2.zip` and its SHA-256 checksum. The ZIP uses an explicit file list and the required `IRS Lite` install folder; tests, build dependencies, Git metadata, and saved records are excluded. Publishing a GitHub Release with a tag matching the TOC version runs validation and attaches the install package automatically.
 
 ## License and credits
 

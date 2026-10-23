@@ -7,7 +7,7 @@ local function Text(parent, style, x, y, width, content)
     text:SetPoint("TOPLEFT", x, y)
     text:SetWidth(width)
     text:SetJustifyH("LEFT")
-    text:SetTextColor(0.88, 0.84, 0.75)
+    IRS:SetLayoutColor(text, "SetTextColor", 0.88, 0.84, 0.75)
     text:SetText(content)
     return text
 end
@@ -42,7 +42,7 @@ ADJUSTMENTS
 Daily Income Adjustment adds a signed correction to the current character and account Today, This Reset, This Month, and Total Recorded, including today's graph bar. Overall Income Adjustment changes only account Total Recorded. Neither moves actual gold. Enter +500g or -500g; k and m suffixes are accepted.
 
 SETTINGS AND WINDOW
-Settings contains the minimap toggle, transfer settings, font controls, and Import IRS files. Drag the window to move it. Escape closes it. The minimap button opens Lite; right-click opens Settings.
+Settings contains the minimap toggle, transfer settings, font controls, appearance presets, and Import IRS files. Choose IRS Default or ElvUI Inspired under Profiles; ElvUI is not required. Drag the window to move it. Escape closes it. The minimap button opens Lite; right-click opens Settings.
 
 COMMANDS
 /irslite or /irsl — toggle Lite
@@ -51,7 +51,7 @@ COMMANDS
 /irslite settings — open Settings
 
 STORAGE
-Lite uses its own account-wide IRSLiteDB. To copy your existing IRS history, enable both addons, reload, and use Settings > Import > Import IRS files. Confirm to replace Lite's history with a separate copy of IRS earnings, character totals, transfer settings, and fonts. Importing never changes the full addon's records. You can disable the full addon afterward; it keeps /irs when enabled.]])
+Lite uses its own account-wide IRSLiteDB. To copy your existing IRS history, enable both addons, reload, and use Settings > Import > Import IRS files. Confirm to replace Lite's history with a separate copy of IRS earnings, character totals, transfer settings, fonts, and appearance. Importing never changes the full addon's records. You can disable the full addon afterward; it keeps /irs when enabled.]])
 local adjustments = CreateFrame("Frame", nil, page)
 adjustments:SetPoint("TOPLEFT", 4, -88)
 adjustments:SetPoint("BOTTOMRIGHT", -4, 8)
