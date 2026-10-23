@@ -1,0 +1,17 @@
+name: Feature request
+description: Suggest an improvement to IRS Lite.
+title: "[Feature] "
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What would this help you do?
+      description: Describe the problem or workflow, keeping Lite's small scope in mind.
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested behavior
+    validations:
+      required: true

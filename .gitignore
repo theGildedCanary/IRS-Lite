@@ -1,0 +1,31 @@
+# Build outputs and local test dependencies
+/dist/
+/build/
+/.test-runtime/
+/.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Personal settings, credentials, and editor state
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# WoW account data and local backups
+WTF/
+SavedVariables/
+IRSLite.lua
+IRSLiteDB.lua
+IncomeRecordsSystem.lua
+*.lua.bak
+*.bak
+*.log
+*.tmp
