@@ -55,6 +55,58 @@ function IRS:EnsureDB()
     db.settings.fontSizes = db.settings.fontSizes or {main = {}}
     db.settings.fontSizes.main = db.settings.fontSizes.main or {}
     db.ui = db.ui or {}
+    self:RepairImportedTransferHistory()
+end
+-- Older IRS history can contain a transfer in one character's earnings after
+-- it was already excluded from the account ledger. Repair only an isolated,
+-- consistently attributable discrepancy; never raise income to match a transfer.
+function IRS:RepairImportedTransferHistory()
+    local db = self.db
+    if not db.irsImport or db.importedTransferRepair then return false end
+    local function Difference(period)
+        local sums, differences = {}, {}
+        for _, ledger in pairs(db.characters) do
+            for key, amount in pairs(ledger[period] or {}) do
+                sums[key] = (sums[key] or 0) + amount
+            end
+        end
+        for key, amount in pairs(db.tracking[period] or {}) do
+            sums[key] = (sums[key] or 0) - amount
+        end
+        for key, amount in pairs(sums) do
+            if amount ~= 0 then differences[#differences + 1] = {key = key, amount = amount} end
+        end
+        if #differences == 1 and differences[1].amount > 0 then return differences[1] end
+    end
+    local day, week, month = Difference("days"), Difference("weeks"), Difference("months")
+    if not day or not week or not month or day.amount ~= week.amount
+        or day.amount ~= month.amount or day.key:sub(1, 7) ~= month.key then return false end
+    local total, candidate = 0, nil
+    for key, ledger in pairs(db.characters) do
+        total = total + (ledger.total or 0)
+        if (ledger.days[day.key] or 0) >= day.amount then
+            if candidate then return false end -- More than one possible owner.
+            candidate = key
+        end
+    end
+    if not candidate or total - (db.tracking.total or 0) ~= day.amount then return false end
+    local ledger = db.characters[candidate]
+    if (ledger.weeks[week.key] or 0) < day.amount
+        or (ledger.months[month.key] or 0) < day.amount
+        or (ledger.total or 0) < day.amount then return false end
+    -- Keep an independent snapshot for recovery and prevent a second repair.
+    local original = Ledger()
+    original.total = ledger.total
+    for _, period in ipairs({"days", "weeks", "months"}) do
+        for key, amount in pairs(ledger[period]) do original[period][key] = amount end
+    end
+    db.importedTransferRepair = {characterKey = candidate, amount = day.amount,
+        day = day.key, week = week.key, month = month.key, original = original}
+    ledger.days[day.key] = ledger.days[day.key] - day.amount
+    ledger.weeks[week.key] = ledger.weeks[week.key] - day.amount
+    ledger.months[month.key] = ledger.months[month.key] - day.amount
+    ledger.total = ledger.total - day.amount
+    return true
 end
 function IRS:CharacterKey()
     local legacyKey = (UnitName("player") or "Unknown") .. "@" .. (GetRealmName() or "Unknown")

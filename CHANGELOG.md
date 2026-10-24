@@ -2,6 +2,9 @@
 
 ## 1.0.6
 
+- Repair isolated imported transfer discrepancies when day/reset/month/total records consistently identify one character. Remove the excess from character earnings, preserve account earnings and overall adjustments, and retain the original character ledger for recovery. Run on upgrade and fresh imports.
+- Added regression coverage for guild-to-Warband gold movement, imported-history repair, reload safety, backups, and ambiguous histories.
+
 - Added **WoW Forever** under **Settings > Profiles**, matching Alt Tracking Assistant's teal-and-gold theme with original background artwork, ornamental frame, centered banner, and header icons.
 - Added ATA-style rounded corners, dark table and sidebar backgrounds at 75% opacity, and button backgrounds at 80% opacity in WoW Forever.
 - Added themed backgrounds to the user manual, adjustments, minimap settings, fonts, profiles, and import; darkened transfer cards.

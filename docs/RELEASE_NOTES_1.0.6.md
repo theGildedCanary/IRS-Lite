@@ -12,4 +12,6 @@ All theme artwork is included; **Alt Tracking Assistant is not required**. IRS D
 
 **To enable:** Open `/irslite settings`, select **Profiles**, then **WoW Forever**.
 
+**History correction:** Existing gold moved between a personal Guild Bank and the Warband Bank is not income. This update repairs an isolated imported character overstatement when the same excess appears in day, reset, month, and total history and has one possible character owner. Account earnings and overall adjustments are preserved. The original character ledger is saved for recovery; ambiguous history is left unchanged. The repair runs automatically on reload and after importing IRS records.
+
 **Installation:** Extract `IRS-Lite-1.0.6.zip` into your Retail `Interface/AddOns` folder, replacing the existing `IRS Lite` folder, then reload the UI. For a first-time installation, fully restart WoW.

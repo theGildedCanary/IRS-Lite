@@ -133,6 +133,8 @@ function IRS:ImportIRSFiles()
     self.db.internalTransfers = snapshot.internalTransfers
     for key, value in pairs(snapshot.settings) do self.db.settings[key] = value end
     self.db.irsImport = {at = GetServerTime(), characters = snapshot.characterCount, days = snapshot.dayCount}
+    self.db.importedTransferRepair = nil
+    self:RepairImportedTransferHistory()
     -- Corrections for the previous Lite history must never touch the imported copy.
     self.internalTransferRuntime.recentRecordedWallet = {}
     self.internalTransferRuntime.pendingStorage = {}

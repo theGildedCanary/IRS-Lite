@@ -501,6 +501,70 @@ local totalBeforeMissingEvent=total()
 WithdrawGuildBankMoney(10000);money(10000);Advance(2)
 eq(total(),totalBeforeMissingEvent,'withdrawal request does not require a replayed opening event')
 
+-- Moving existing funds from a personal guild bank through the wallet into the
+-- Warband Bank never creates earnings on either side of the transfer.
+Event('GUILDBANKFRAME_CLOSED');Advance(31)
+local accountBefore,characterBefore=addon:GetCurrentEarnings(),addon:GetCharacterEarnings()
+guildGold=50000000;Event('GUILDBANKFRAME_OPENED');Event('GUILDBANK_UPDATE_MONEY')
+WithdrawGuildBankMoney(25000000);money(25000000)
+guildGold=guildGold-25000000;Event('GUILDBANK_UPDATE_MONEY');Advance(2)
+Event('GUILDBANKFRAME_CLOSED');Event('BANKFRAME_OPENED')
+warband=warband+25000000;Event('ACCOUNT_MONEY');money(-25000000);Advance(2)
+Event('BANKFRAME_CLOSED')
+for _,period in ipairs({'today','week','month','total'}) do
+    eq(addon:GetCurrentEarnings()[period],accountBefore[period],'bank-to-bank account '..period)
+    eq(addon:GetCharacterEarnings()[period],characterBefore[period],'bank-to-bank character '..period)
+end
+
+-- Legacy imported transfer excess: all four ledgers identify the same amount
+-- and only one character could own it. Preserve account income and a backup.
+local function LegacyTransfer()
+    local function ledger(amount)
+        return {days={['2026-10-05']=amount},weeks={['old-reset']=amount},
+            months={['2026-10']=amount},total=amount}
+    end
+    IRSLiteDB={irsImport={at=now},tracking=ledger(100000),
+        characters={owner=ledger(5100000),alt=ledger(0)}}
+    IRSLiteDB.tracking.overallAdjustment=7000000
+    addon.db=IRSLiteDB
+end
+LegacyTransfer();addon:EnsureDB()
+eq(addon.db.characters.owner.total,100000)
+eq(addon.db.tracking.total,100000);eq(addon.db.tracking.overallAdjustment,7000000)
+local repair=addon.db.importedTransferRepair
+eq(repair.amount,5000000);eq(repair.original.total,5100000)
+for _,period in ipairs({'days','weeks','months'}) do
+    for _,amount in pairs(addon.db.characters.owner[period]) do eq(amount,100000) end
+    for _,amount in pairs(repair.original[period]) do eq(amount,5100000) end
+end
+addon:EnsureDB();eq(addon.db.characters.owner.total,100000,'reload is idempotent')
+eq(repair.original.total,5100000,'backup remains independent')
+LegacyTransfer();addon.db.irsImport=nil
+assert(not addon:RepairImportedTransferHistory(),'native ledgers are not migrated')
+LegacyTransfer();addon.db.characters.alt.days['2026-10-05']=6000000
+assert(not addon:RepairImportedTransferHistory(),'ambiguous ownership is not guessed')
+LegacyTransfer();addon.db.characters.owner.weeks['old-reset']=5100001
+assert(not addon:RepairImportedTransferHistory(),'inconsistent periods are not changed')
+LegacyTransfer();addon.db.characters.owner.total=5100001
+assert(not addon:RepairImportedTransferHistory(),'inconsistent total is not changed')
+LegacyTransfer();addon.db.characters.owner.days['2026-10-06']=1
+assert(not addon:RepairImportedTransferHistory(),'multiple discrepant days are not changed')
+LegacyTransfer();addon.db.tracking.total=10100000
+assert(not addon:RepairImportedTransferHistory(),'account income is never raised')
+-- Fresh imports use the same repair and do not alter the full addon's records.
+LegacyTransfer()
+addon.db.irsImport=nil;addon:EnsureDB()
+IncomeRecordsSystemDB={tracking={totalEarned=100000,overallIncomeAdjustment=7000000,
+    days={['2026-10-05']={earned=100000}},weeks={['old-reset']={earned=100000}},
+    months={['2026-10']={earned=100000}}},characters={owner={earnedSinceTracking=5100000,
+        periodEarnings=addon.db.characters.owner}}}
+assert(addon:ImportIRSFiles())
+eq(addon.db.characters.owner.total,100000,'fresh import repairs excess')
+eq(IncomeRecordsSystemDB.characters.owner.earnedSinceTracking,5100000,'source total untouched')
+eq(IncomeRecordsSystemDB.characters.owner.periodEarnings.days['2026-10-05'],5100000,'source day untouched')
+assert(addon:ImportIRSFiles())
+eq(addon.db.characters.owner.total,100000,'repeated import repairs once per snapshot')
+print('PASS: guild-to-warband transfers, conservative imported-history repair, backup, reload, and ambiguous-history guards')
 print('PASS: checked guild deposits/withdrawals, missing initial balance, delayed bank echoes, bank-first requests, failed requests, shared banks, and unrelated spending')
 print('PASS: cross-realm bank identity, legacy migration, latest balance, shared ownership, distinct namesakes, delayed guild ID, imported aliases, and transfer matching')
 print('PASS: appearance preset controls, saved state, live colors, default restoration, alert colors, import, font/history preservation')

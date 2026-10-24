@@ -31,6 +31,8 @@ WoW addons cannot browse SavedVariables files directly. The **Import IRS files**
 
 ## Guild banks across realms
 
+On upgrade or import, Lite repairs an isolated imported character overstatement when a single day, reset, month, and total all contain the same excess and only one character can account for it. The account ledger is the reference: existing bank funds are not added as income. Account earnings and overall adjustments are preserved, and the original character ledger is retained in `IRSLiteDB.importedTransferRepair.original` for recovery. Ambiguous or inconsistent history is left unchanged.
+
 Lite identifies each guild by its unique guild ID, so characters on different realms share one bank entry and one personal-bank setting. When upgrading from older versions, log into a guild character on each affected realm once to consolidate its old entry. The latest known balance is kept; duplicate balances are never added together. Different guilds with the same name remain separate.
 
 ## Appearance presets
