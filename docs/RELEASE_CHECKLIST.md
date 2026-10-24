@@ -12,3 +12,5 @@
 10. Create a GitHub Release with a tag such as `v1.0.6` matching the TOC version. Use the corresponding changelog entry as its description. Publishing the release runs validation again and attaches only the install ZIP.
 
 GitHub's automatic source archives are development downloads. Users should install the `IRS-Lite-VERSION.zip` release asset to get the correct WoW folder name.
+
+To rebuild an existing release without changing its version, point its tag at the intended source commit, then open Actions > Release package > Run workflow on `main` and enter the existing tag (for example `v1.0.6`). The workflow validates and rebuilds that tag, then replaces its existing install ZIP. Use a fresh manual run to pick up workflow changes; re-running an older job uses its original workflow definition.

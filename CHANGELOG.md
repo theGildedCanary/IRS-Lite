@@ -2,6 +2,8 @@
 
 ## 1.0.6
 
+- Allow rebuilding the existing release from Actions and replace its install ZIP instead of failing when the filename already exists.
+
 - Repair isolated imported transfer discrepancies when day/reset/month/total records consistently identify one character. Remove the excess from character earnings, preserve account earnings and overall adjustments, and retain the original character ledger for recovery. Run on upgrade and fresh imports.
 - Added regression coverage for guild-to-Warband gold movement, imported-history repair, reload safety, backups, and ambiguous histories.
 
