@@ -80,7 +80,10 @@ local function Build(source)
     local settings = source.settings or {}
     snapshot.settings.showMinimapButton = settings.showMinimapButton ~= false
     snapshot.settings.fontFace = settings.fontFace or "default"
-    snapshot.settings.layoutStyle = settings.layoutStyle == "elvui" and "elvui" or "default"
+    snapshot.settings.layoutStyle = "default"
+    for _, option in ipairs(IRS.LAYOUT_STYLE_OPTIONS) do
+        if option.key == settings.layoutStyle then snapshot.settings.layoutStyle = option.key; break end
+    end
     snapshot.settings.fontSizes = {main = {}}
     for key, default in pairs(IRS.FONT_STYLE_DEFAULTS.main) do
         local value = settings.fontSizes and settings.fontSizes.main and settings.fontSizes.main[key]

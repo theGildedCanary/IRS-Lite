@@ -64,6 +64,7 @@ local function MakePanel(parent, color)
         edgeFile = "Interface/Buttons/WHITE8X8",
         edgeSize = 2,
     })
+    IRS:StyleLayoutPanel(panel)
     local c = color or COLORS.panelAlt
     IRS:SetLayoutColor(panel, "SetBackdropColor", c[1], c[2], c[3], c[4] or 1)
     IRS:SetLayoutColor(panel, "SetBackdropBorderColor", unpack(COLORS.border))

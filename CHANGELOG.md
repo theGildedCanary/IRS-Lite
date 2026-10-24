@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.6
+
+- Added **WoW Forever** under **Settings > Profiles**, matching Alt Tracking Assistant's teal-and-gold theme with original background artwork, ornamental frame, centered banner, and header icons.
+- Added ATA-style rounded corners, dark table and sidebar backgrounds at 75% opacity, and button backgrounds at 80% opacity in WoW Forever.
+- Added themed backgrounds to the user manual, adjustments, minimap settings, fonts, profiles, and import; darkened transfer cards.
+- Added 75%-opacity dashboard total cards and chart backgrounds; WoW Forever graph gains use light gold bars for clearer contrast.
+- Bundled all Forever artwork so Alt Tracking Assistant is not required. Presets apply immediately and persist across characters and reloads while preserving earnings and font preferences.
+- Added regression coverage for Forever controls, rounded backgrounds, opacity, hover states, saved preferences, imports, and restoration of existing presets.
+
 ## 1.0.5
 
 - Fixed checked Guild Bank deposits being recorded as expenses after reloading while the bank window is already open.

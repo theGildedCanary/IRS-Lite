@@ -17,13 +17,16 @@ local function Button(parent, label, x, y, width, callback)
     button:SetSize(width, 28)
     button:SetText(label)
     IRS:RegisterFontString("main", "label", button:GetFontString())
+    IRS:StyleLayoutButton(button)
     button:SetScript("OnClick", callback)
     return button
 end
 Text(page, "page", 4, -4, 800, "SETTINGS")
 local sections = {}
 for _, key in ipairs({"minimap", "transfers", "fonts", "profiles", "import"}) do
-    local section = CreateFrame("Frame", nil, page)
+    local section = CreateFrame("Frame", nil, page, "BackdropTemplate")
+    -- Transfer cards own their fills, avoiding stacked translucent backgrounds.
+    if key ~= "transfers" then IRS:AddLayoutSectionBackground(section) end
     section:SetPoint("TOPLEFT", 0, -84)
     section:SetPoint("BOTTOMRIGHT", 0, 0)
     section:Hide()
@@ -85,7 +88,7 @@ end
 Button(fonts, "RESET FONT SIZES", 16, -308, 220, function() IRS:ResetFontSizes("main") end)
 local profiles = sections.profiles
 Text(profiles, "section", 16, -12, 800, "APPEARANCE PRESETS")
-Text(profiles, "body", 16, -48, 800, "Choose the original warm IRS palette or the dark ElvUI Inspired palette. Changes apply immediately and are saved across characters. ElvUI is not required.")
+Text(profiles, "body", 16, -48, 800, "Choose IRS Default, ElvUI Inspired, or Alt Tracking Assistant's WoW Forever theme. Changes apply immediately and are saved across characters.")
 local profileButtons = {}
 for i, option in ipairs(IRS.LAYOUT_STYLE_OPTIONS) do
     local key = option.key
@@ -94,7 +97,7 @@ for i, option in ipairs(IRS.LAYOUT_STYLE_OPTIONS) do
     end)
 end
 local profileSelection = Text(profiles, "body", 16, -160, 800, "")
-Text(profiles, "helper", 16, -204, 800, "Appearance presets change panel, border, and text colors. Your earnings and font preferences are preserved.")
+Text(profiles, "helper", 16, -204, 800, "WoW Forever adds teal panels, gold trim, and matching background and corner artwork. No other addon is required. Your earnings and font preferences are preserved.")
 local importPage = sections["import"]
 Text(importPage, "section", 16, -12, 800, "IMPORT IRS FILES")
 Text(importPage, "body", 16, -48, 800, "Copy IRS earnings history, character totals, transfer settings, fonts, and appearance into Lite. This replaces Lite's current history. Your original IRS records stay unchanged.")

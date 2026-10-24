@@ -134,7 +134,7 @@ IRS.warbandBankRuntime = {isOpen = false}
 function IRS:StyleButtonFeedback(button)
     local highlight = button:CreateTexture(nil, "HIGHLIGHT")
     highlight:SetAllPoints(button)
-    highlight:SetColorTexture(0.86, 0.71, 0.36, 0.12)
+    self:SetLayoutColor(highlight, "SetColorTexture", 0.86, 0.71, 0.36, 0.12)
     highlight:SetBlendMode("ADD")
 end
 function IRS:GetPeriodKeys()

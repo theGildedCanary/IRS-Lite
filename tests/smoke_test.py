@@ -85,6 +85,7 @@ function methods:GetChecked() return self.checked end
 function methods:HasFocus() return self.focus==true end
 function methods:ClearFocus() self.focus=false end
 function methods:GetAlpha() return 1 end
+function methods:GetFrameLevel() return self.level or 1 end
 function methods:IsEnabled() return self.enabled~=false end
 function methods:SetEnabled(v) self.enabled=v end
 function methods:GetParent() return self.parent end
@@ -92,6 +93,12 @@ function methods:GetPoint() return 'CENTER',UIParent,'CENTER',0,0 end
 function methods:GetName() return self.name end
 function methods:CreateFontString(name) return CreateFrame('FontString',name,self) end
 function methods:CreateTexture(name) return CreateFrame('Texture',name,self) end
+function methods:CreateMaskTexture(name) return CreateFrame('MaskTexture',name,self) end
+function methods:AddMaskTexture() end
+function methods:GetNormalTexture() return nil end
+function methods:GetPushedTexture() return nil end
+function methods:GetHighlightTexture() return nil end
+function methods:GetDisabledTexture() return nil end
 local noop=function() end
 local mt={__index=function(t,key)
     if methods[key] then return methods[key] end
@@ -227,8 +234,8 @@ eq(addon.mainFrame.colors.SetBackdropColor[4],0.72)
 addon:SelectSettingsSection('profiles')
 local defaultProfile,elvuiProfile
 for _,f in ipairs(frames) do
-    if f.text=='IRS Default' then defaultProfile=f end
-    if f.text=='ElvUI Inspired' then elvuiProfile=f end
+    if f.kind=='Button' and f.text=='IRS Default' then defaultProfile=f end
+    if f.kind=='Button' and f.text=='ElvUI Inspired' then elvuiProfile=f end
 end
 assert(defaultProfile and elvuiProfile)
 assert(defaultProfile:IsEnabled() and not elvuiProfile:IsEnabled())
@@ -249,6 +256,69 @@ eq(addon.mainFrame.colors.SetBackdropColor[1],0.025,'saved preset applies on loa
 eq(total(),historyBeforeProfile,'profiles preserve earnings')
 eq(addon:GetFontSize('main','body'),bodySizeBeforeProfile,'profiles preserve fonts')
 addon:SetLayoutStyle('default')
+-- Forever includes artwork, styles live and newly created regions, and restores
+-- templates and palettes without touching earnings or font preferences.
+local foreverProfile
+for _,f in ipairs(frames) do
+    if f.kind=='Button' and f.text=='WoW Forever' then foreverProfile=f end
+end
+assert(foreverProfile and foreverProfile:IsEnabled())
+foreverProfile.scripts.OnClick()
+eq(addon:GetLayoutStyle(),'forever')
+eq(addon:GetLayoutStyleLabel(),'WoW Forever')
+assert(not foreverProfile:IsEnabled())
+assert(addon.foreverArtwork.background:IsShown() and addon.foreverArtwork.ornaments:IsShown())
+local defaultSkin
+for _,f in ipairs(frames) do
+    if f.kind=='Frame' and f.parent==defaultProfile then defaultSkin=f end
+end
+assert(defaultSkin and defaultSkin:IsShown())
+eq(defaultSkin.roundedLayers.Fill[5].colors.SetVertexColor[2],0.216)
+eq(defaultSkin.roundedLayers.Fill[5].colors.SetVertexColor[4],0.80,'button fill opacity')
+defaultProfile.scripts.OnEnter()
+eq(defaultSkin.roundedLayers.Fill[5].colors.SetVertexColor[2],0.325,'Forever hover color')
+defaultProfile.scripts.OnLeave()
+eq(defaultSkin.roundedLayers.Fill[5].colors.SetVertexColor[2],0.216)
+eq(addon.mainFrame.colors.SetBackdropColor[4],0,'artwork remains visible behind panels')
+addon:SetLayoutColor(probe,'SetBackdropColor',0.190,0.145,0.098,0.88)
+eq(probe.colors.SetBackdropColor[1],0.024)
+eq(probe.colors.SetBackdropColor[2],0.17)
+eq(probe.colors.SetBackdropColor[4],0.75,'dark table fill opacity')
+local roundedProbe=CreateFrame('Frame')
+addon:StyleLayoutPanel(roundedProbe)
+addon:SetLayoutColor(roundedProbe,'SetBackdropColor',0.225,0.170,0.112,0.985)
+eq(roundedProbe.colors.SetBackdropColor[4],0,'native square backdrop is hidden')
+eq(#roundedProbe.roundedLayers.Fill,9)
+eq(#roundedProbe.roundedLayers.Border,9)
+for _,texture in ipairs(roundedProbe.roundedLayers.Fill) do
+    assert(texture:IsShown())
+    eq(texture.colors.SetVertexColor[2],0.17,'transfer panel uses dark teal')
+    eq(texture.colors.SetVertexColor[4],0.75)
+end
+local sectionProbe=CreateFrame('Frame')
+addon:AddLayoutSectionBackground(sectionProbe)
+assert(sectionProbe.roundedLayers.Fill[5]:IsShown())
+addon:SetLayoutColor(probe,'SetTextColor',0.86,0.71,0.36,1)
+eq(probe.colors.SetTextColor[1],0.816)
+addon:SetLayoutColor(probe,'SetBackdropColor',0.63,0.29,0.25,0.5)
+addon.db.settings.layoutStyle='forever';Event('ADDON_LOADED','IRS Lite')
+eq(addon:GetLayoutStyle(),'forever')
+assert(addon.foreverArtwork.background:IsShown())
+eq(probe.colors.SetBackdropColor[1],0.63,'alert colors survive saved theme refresh')
+addon:SetLayoutStyle('elvui')
+assert(not addon.foreverArtwork.background:IsShown() and not addon.foreverArtwork.ornaments:IsShown())
+assert(not defaultSkin:IsShown(),'restore stock control appearance')
+eq(probe.colors.SetTextColor[1],0.86,'gold restores in ElvUI')
+eq(addon.mainFrame.colors.SetBackdropColor[1],0.025)
+addon:SetLayoutStyle('default')
+eq(addon.mainFrame.colors.SetBackdropColor[1],0.165)
+eq(roundedProbe.colors.SetBackdropColor[1],0.225,'restore original square backdrop')
+eq(roundedProbe.colors.SetBackdropColor[4],0.985)
+assert(not roundedProbe.roundedLayers.Fill[5]:IsShown())
+eq(sectionProbe.colors.SetBackdropColor[4],0,'new section fills are Forever only')
+eq(probe.colors.SetTextColor[1],0.86)
+eq(total(),historyBeforeProfile,'Forever preserves earnings')
+eq(addon:GetFontSize('main','body'),bodySizeBeforeProfile,'Forever preserves fonts')
 -- IRS import is manual, replaces rather than adds, and copies all supported periods.
 assert(addon:GetIRSImportPreview()==nil)
 local day,week,month=addon:GetPeriodKeys()
@@ -264,6 +334,11 @@ IncomeRecordsSystemDB={
     projects={items={sentinel=true}},reserves={sentinel=true},
 }
 local source=IncomeRecordsSystemDB
+source.settings.layoutStyle='forever'
+assert(addon:ImportIRSFiles())
+eq(addon:GetLayoutStyle(),'forever','import recognizes Forever')
+assert(addon.foreverArtwork.background:IsShown(),'import applies Forever artwork')
+source.settings.layoutStyle='elvui'
 local oldTotal=total()
 local preview=addon:GetIRSImportPreview()
 eq(preview.characterCount,1);eq(preview.dayCount,1);eq(total(),oldTotal,'preview does not import')
@@ -296,9 +371,9 @@ assert(not addon:ImportIRSFiles());Advance(1.3);Event('BANKFRAME_CLOSED')
 addon:SelectSettingsSection('import')
 local importButton,confirm,cancel
 for _,f in ipairs(frames) do
-    if f.text=='Import IRS files' then importButton=f end
-    if f.text=='REPLACE LITE HISTORY' then confirm=f end
-    if f.text=='CANCEL' then cancel=f end
+    if f.kind=='Button' and f.text=='Import IRS files' then importButton=f end
+    if f.kind=='Button' and f.text=='REPLACE LITE HISTORY' then confirm=f end
+    if f.kind=='Button' and f.text=='CANCEL' then cancel=f end
 end
 assert(importButton and confirm and cancel)
 local before=total();importButton.scripts.OnClick();assert(confirm:IsShown());eq(total(),before)

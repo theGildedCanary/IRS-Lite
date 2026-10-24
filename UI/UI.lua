@@ -51,6 +51,7 @@ local function MakePanel(parent, bgColor)
         edgeFile = "Interface/Buttons/WHITE8X8",
         edgeSize = 1,
     })
+    IRS:StyleLayoutPanel(panel)
     local c = bgColor or COLORS.panel
     IRS:SetLayoutColor(panel, "SetBackdropColor", c[1], c[2], c[3], c[4] or 1)
     IRS:SetLayoutColor(panel, "SetBackdropBorderColor", unpack(COLORS.borderSoft))
@@ -189,6 +190,43 @@ local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
 IRS:StyleButtonFeedback(close)
 close:SetPoint("TOPRIGHT", -8, -8)
 
+local foreverTitle = MakeText(header, "page", COLORS.gold, "CENTER")
+foreverTitle:SetPoint("CENTER", header, "CENTER", 0, 0)
+foreverTitle:SetText("INCOME RECORDS SYSTEM")
+local function ForeverHeaderButton(art, side, offset, tooltip, callback)
+    local button = CreateFrame("Button", nil, frame)
+    button:SetSize(26, 26)
+    button:SetPoint("CENTER", frame, side, offset, -36)
+    local disk = button:CreateTexture(nil, "BACKGROUND")
+    disk:SetAllPoints(button)
+    disk:SetColorTexture(0.015, 0.10, 0.14, 0.80)
+    local mask = button:CreateMaskTexture(nil, "BACKGROUND")
+    mask:SetTexture("Interface\\CharacterFrame\\TempPortraitAlphaMask")
+    mask:SetAllPoints(disk)
+    disk:AddMaskTexture(mask)
+    local icon = button:CreateTexture(nil, "ARTWORK")
+    icon:SetSize(art == "Close" and 20 or 22, art == "Close" and 20 or 22)
+    icon:SetPoint("CENTER")
+    icon:SetTexture(MEDIA .. "ForeverHeader" .. art .. ".tga")
+    icon:SetVertexColor(0.816, 0.718, 0.537, 1)
+    button:SetScript("OnClick", callback)
+    button:SetScript("OnEnter", function(self)
+        disk:SetColorTexture(0.082, 0.325, 0.388, 0.80)
+        icon:SetVertexColor(1, 0.88, 0.65, 1)
+        GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+        GameTooltip:AddLine(tooltip)
+        GameTooltip:Show()
+    end)
+    button:SetScript("OnLeave", function()
+        disk:SetColorTexture(0.015, 0.10, 0.14, 0.80)
+        icon:SetVertexColor(0.816, 0.718, 0.537, 1)
+        GameTooltip:Hide()
+    end)
+    return button
+end
+local foreverClose = ForeverHeaderButton("Close", "TOPRIGHT", -46, "Close", function() frame:Hide() end)
+local foreverSettings = ForeverHeaderButton("Settings", "TOPLEFT", 46, "Settings", function() IRS:SelectTab("settings") end)
+
 -- ============================================================================
 -- SECTION 2 - SIDEBAR NAVIGATION
 -- Dashboard / Tools / Settings.
@@ -208,6 +246,79 @@ rail.divider:SetPoint("BOTTOMRIGHT", -1, 0)
 local content = CreateFrame("Frame", nil, frame)
 content:SetPoint("TOPLEFT", rail, "TOPRIGHT", 12, 0)
 content:SetPoint("BOTTOMRIGHT", -16, 16)
+
+-- Bundle ATA's original Forever artwork; never depend on its addon being loaded.
+local foreverBackground = frame:CreateTexture(nil, "BACKGROUND")
+foreverBackground:SetAllPoints(frame)
+foreverBackground:SetTexture(MEDIA .. "ForeverPanelBackground.tga")
+-- BackdropTemplate's fill sits above BACKGROUND textures; hide that fill in
+-- Forever mode while the header and sidebar use their own themed fills.
+local ornaments = CreateFrame("Frame", nil, frame)
+ornaments:SetAllPoints(frame)
+ornaments:SetFrameLevel(frame:GetFrameLevel() + 10)
+local u, v = 43 / 64, 45 / 64
+for _, spec in ipairs({
+    {"TOPLEFT", 9, -9, 0, u, 0, v},
+    {"TOPRIGHT", -9, -9, u, 0, 0, v},
+    {"BOTTOMLEFT", 9, 9, 0, u, v, 0},
+    {"BOTTOMRIGHT", -9, 9, u, 0, v, 0},
+}) do
+    local corner = ornaments:CreateTexture(nil, "OVERLAY")
+    corner:SetSize(43, 45)
+    corner:SetPoint(spec[1], ornaments, spec[1], spec[2], spec[3])
+    corner:SetTexture(MEDIA .. "ForeverCornerTL.tga", nil, nil, "LINEAR")
+    corner:SetTexCoord(spec[4], spec[5], spec[6], spec[7])
+end
+for _, side in ipairs({"TOP", "BOTTOM", "LEFT", "RIGHT"}) do
+    local edge = ornaments:CreateTexture(nil, "BORDER")
+    edge:SetColorTexture(208 / 255, 183 / 255, 137 / 255, 1)
+    if side == "TOP" or side == "BOTTOM" then
+        local offset = side == "TOP" and -14 or 14
+        edge:SetPoint(side .. "LEFT", ornaments, side .. "LEFT", 50, offset)
+        edge:SetPoint(side .. "RIGHT", ornaments, side .. "RIGHT", -50, offset)
+        edge:SetHeight(2)
+    else
+        local offset = side == "LEFT" and 14 or -14
+        edge:SetPoint("TOP" .. side, ornaments, "TOP" .. side, offset, -52)
+        edge:SetPoint("BOTTOM" .. side, ornaments, "BOTTOM" .. side, offset, 52)
+        edge:SetWidth(2)
+    end
+end
+IRS.foreverArtwork = {background = foreverBackground, ornaments = ornaments}
+function IRS:RefreshLayoutArtwork()
+    local active = self:GetLayoutStyle() == "forever"
+    foreverBackground:SetShown(active)
+    ornaments:SetShown(active)
+    foreverTitle:SetShown(active)
+    foreverClose:SetShown(active)
+    foreverSettings:SetShown(active)
+    close:SetShown(not active)
+    titleIcon:SetShown(not active)
+    irsText:SetShown(not active)
+    title:SetShown(not active)
+    titleSub:SetShown(not active)
+    if active then
+        frame:SetBackdropColor(0, 0, 0, 0)
+        frame:SetBackdropBorderColor(0, 0, 0, 0)
+        header:SetBackdropColor(0, 0, 0, 0)
+    end
+    local inset = active and 16 or 12
+    header:ClearAllPoints()
+    header:SetPoint("TOPLEFT", inset, active and -14 or -12)
+    header:SetPoint("TOPRIGHT", -inset, active and -14 or -12)
+    header:SetHeight(active and 44 or 64)
+    titleIcon:ClearAllPoints()
+    titleIcon:SetPoint("LEFT", active and 30 or 8, 0)
+    close:ClearAllPoints()
+    close:SetPoint("TOPRIGHT", active and -58 or -8, active and -24 or -8)
+    lastUpdated:ClearAllPoints()
+    lastUpdated:SetPoint("RIGHT", active and -68 or -44, active and 0 or 3)
+    rail:ClearAllPoints()
+    rail:SetPoint("TOPLEFT", active and 24 or 14, -84)
+    rail:SetPoint("BOTTOMLEFT", active and 24 or 14, active and 24 or 14)
+    content:SetPoint("BOTTOMRIGHT", active and -24 or -16, active and 24 or 16)
+end
+IRS:RefreshLayoutArtwork()
 
 local pages, tabs = {}, {}
 local activeTab = "dashboard"
@@ -275,7 +386,7 @@ periodContainer:SetPoint("TOPRIGHT", 0, -8)
 periodContainer:SetHeight(84)
 
 local function MakePeriodCard(parent, x, width, heading)
-    local card = CreateFrame("Frame", nil, parent)
+    local card = MakePanel(parent, {0.190, 0.145, 0.098, 0.75})
     card:SetPoint("TOPLEFT", x, 0)
     card:SetSize(width, 84)
 
@@ -313,20 +424,25 @@ local weekCard = MakePeriodCard(periodContainer, cardWidth + cardGap, cardWidth,
 local monthCard = MakePeriodCard(periodContainer, (cardWidth + cardGap) * 2, cardWidth, "THIS MONTH")
 local totalCard = MakePeriodCard(periodContainer, (cardWidth + cardGap) * 3, cardWidth, "TOTAL RECORDED")
 
-local chartTitle = MakeText(dashboard, "section", COLORS.text, "LEFT")
-chartTitle:SetPoint("TOPLEFT", 0, -120)
+local chartSection = MakePanel(dashboard, {0.190, 0.145, 0.098, 0.75})
+chartSection:SetPoint("TOPLEFT", 0, -108)
+chartSection:SetPoint("TOPRIGHT", 0, -108)
+chartSection:SetHeight(235)
+
+local chartTitle = MakeText(chartSection, "section", COLORS.text, "LEFT")
+chartTitle:SetPoint("TOPLEFT", 10, -12)
 chartTitle:SetText("DAILY EARNINGS (LAST 7 DAYS)")
 
 local titleUnderline = chartTitle:GetParent():CreateTexture(nil, "BORDER")
 titleUnderline:SetTexture("Interface/Buttons/WHITE8X8")
 IRS:SetLayoutColor(titleUnderline, "SetVertexColor", unpack(COLORS.border))
 titleUnderline:SetHeight(1)
-titleUnderline:SetPoint("TOPLEFT", dashboard, "TOPLEFT", 0, -146)
-titleUnderline:SetPoint("TOPRIGHT", dashboard, "TOPRIGHT", -2, -146)
+titleUnderline:SetPoint("TOPLEFT", chartSection, "TOPLEFT", 10, -38)
+titleUnderline:SetPoint("TOPRIGHT", chartSection, "TOPRIGHT", -10, -38)
 
-local chart = CreateFrame("Frame", nil, dashboard)
-chart:SetPoint("TOPLEFT", 0, -155)
-chart:SetPoint("TOPRIGHT", 0, -155)
+local chart = CreateFrame("Frame", nil, chartSection)
+chart:SetPoint("TOPLEFT", 0, -47)
+chart:SetPoint("TOPRIGHT", 0, -47)
 chart:SetHeight(178)
 chart.bars = {}
 chart.grid = {}

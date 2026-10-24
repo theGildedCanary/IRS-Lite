@@ -17,13 +17,18 @@ local function Button(parent, label, x, y, width, callback)
     button:SetSize(width, 28)
     button:SetText(label)
     IRS:RegisterFontString("main", "label", button:GetFontString())
+    IRS:StyleLayoutButton(button)
     button:SetScript("OnClick", callback)
     return button
 end
 Text(page, "page", 4, -4, 800, "TOOLS")
-local manual = CreateFrame("ScrollFrame", "IRSLiteManualScroll", page, "UIPanelScrollFrameTemplate")
-manual:SetPoint("TOPLEFT", 4, -88)
-manual:SetPoint("BOTTOMRIGHT", -28, 8)
+local manualPanel = CreateFrame("Frame", nil, page, "BackdropTemplate")
+manualPanel:SetPoint("TOPLEFT", 4, -88)
+manualPanel:SetPoint("BOTTOMRIGHT", -4, 8)
+IRS:AddLayoutSectionBackground(manualPanel)
+local manual = CreateFrame("ScrollFrame", "IRSLiteManualScroll", manualPanel, "UIPanelScrollFrameTemplate")
+manual:SetPoint("TOPLEFT", 12, -12)
+manual:SetPoint("BOTTOMRIGHT", -28, 12)
 local child = CreateFrame("Frame", nil, manual)
 child:SetSize(820, 1)
 manual:SetScrollChild(child)
@@ -42,7 +47,7 @@ ADJUSTMENTS
 Daily Income Adjustment adds a signed correction to the current character and account Today, This Reset, This Month, and Total Recorded, including today's graph bar. Overall Income Adjustment changes only account Total Recorded. Neither moves actual gold. Enter +500g or -500g; k and m suffixes are accepted.
 
 SETTINGS AND WINDOW
-Settings contains the minimap toggle, transfer settings, font controls, appearance presets, and Import IRS files. Choose IRS Default or ElvUI Inspired under Profiles; ElvUI is not required. Drag the window to move it. Escape closes it. The minimap button opens Lite; right-click opens Settings.
+Settings contains the minimap toggle, transfer settings, font controls, appearance presets, and Import IRS files. Choose IRS Default, ElvUI Inspired, or WoW Forever under Profiles; no other addon is required. Drag the window to move it. Escape closes it. The minimap button opens Lite; right-click opens Settings.
 
 COMMANDS
 /irslite or /irsl — toggle Lite
@@ -58,6 +63,7 @@ adjustments:SetPoint("BOTTOMRIGHT", -4, 8)
 local function ShowSection(section)
     IRS.db.ui.toolsSection = section
     manual:SetShown(section == "manual")
+    manualPanel:SetShown(section == "manual")
     adjustments:SetShown(section == "adjustments")
 end
 Button(page, "USER MANUAL", 4, -44, 150, function() ShowSection("manual") end)
@@ -74,6 +80,13 @@ function IRS:ParseAdjustment(value)
 end
 local summaries = {}
 local function Adjustment(y, heading, explanation, method, summaryKey)
+    local panel = CreateFrame("Frame", nil, adjustments, "BackdropTemplate")
+    panel:SetPoint("TOPLEFT", 0, y + 4)
+    panel:SetPoint("TOPRIGHT", 0, y + 4)
+    panel:SetHeight(164)
+    IRS:AddLayoutSectionBackground(panel)
+    local adjustments = panel
+    y = -12
     Text(adjustments, "section", 8, y, 800, heading)
     Text(adjustments, "body", 8, y - 32, 800, explanation)
     summaries[summaryKey] = Text(adjustments, "helper", 8, y - 78, 460, "")

@@ -8,6 +8,9 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = 'IRS Lite.toc'
 ASSETS = (
     'Media/IRSButton.tga', 'Media/IRSTitleIcon.tga',
+    'Media/ForeverPanelBackground.tga', 'Media/ForeverCornerTL.tga',
+    'Media/ForeverRoundedFill.tga', 'Media/ForeverRoundedBorder.tga',
+    'Media/ForeverHeaderClose.tga', 'Media/ForeverHeaderSettings.tga',
     'Media/fonts/2002.ttf', 'Media/fonts/2002b.ttf', 'Media/fonts/README.md',
 )
 DOCUMENTS = ('README.md', 'CHANGELOG.md', 'LICENSE')
