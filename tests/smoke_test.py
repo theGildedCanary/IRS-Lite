@@ -89,6 +89,9 @@ function methods:GetFrameLevel() return self.level or 1 end
 function methods:IsEnabled() return self.enabled~=false end
 function methods:SetEnabled(v) self.enabled=v end
 function methods:GetParent() return self.parent end
+function methods:GetEffectiveScale() return 2 end
+function methods:GetCenter() return 100,100 end
+function methods:SetPoint(...) self.point={...} end
 function methods:GetPoint() return 'CENTER',UIParent,'CENTER',0,0 end
 function methods:GetName() return self.name end
 function methods:CreateFontString(name) return CreateFrame('FontString',name,self) end
@@ -114,6 +117,8 @@ function CreateFrame(kind,name,parent,template)
 end
 UIParent=CreateFrame('Frame');UIParent:SetSize(1920,1080)
 Minimap=CreateFrame('Frame',nil,UIParent)
+cursorX,cursorY=200,400
+GetCursorPosition=function() return cursorX,cursorY end
 GameTooltip=CreateFrame('GameTooltip',nil,UIParent)
 addon={}
 function Event(name,...)
@@ -131,6 +136,24 @@ lua.execute(r'''
 Event('ADDON_LOADED','IRS Lite')
 Event('PLAYER_LOGIN')
 assert(_G.IRS==nil, 'Lite must not create the full addon global')
+assert(IRSLiteMinimapButton:IsShown(), 'standalone minimap fallback')
+addon.db.settings.showMinimapButton=false
+addon:RefreshMinimapButton()
+assert(not IRSLiteMinimapButton:IsShown(), 'fallback visibility toggle')
+addon.db.settings.showMinimapButton=true
+addon:RefreshMinimapButton()
+IRSLiteMinimapButton.scripts.OnDragStart(IRSLiteMinimapButton)
+IRSLiteMinimapButton.scripts.OnUpdate(IRSLiteMinimapButton)
+assert(math.abs(addon.db.settings.minimap.minimapPos - 90) < 0.001, 'drag uses minimap scale')
+assert(math.abs(IRSLiteMinimapButton.point[4]) < 0.001 and IRSLiteMinimapButton.point[5] == 80)
+cursorX,cursorY=0,200
+IRSLiteMinimapButton.scripts.OnDragStop(IRSLiteMinimapButton)
+assert(IRSLiteMinimapButton.scripts.OnUpdate == nil)
+assert(addon.db.settings.minimap.minimapPos == 180)
+addon:EnsureDB()
+addon:RefreshMinimapButton()
+assert(math.abs(IRSLiteMinimapButton.point[4] + 80) < 0.001, 'restore saved minimap position')
+addon.db.settings.minimap.minimapPos=225
 local function eq(a,b,label) assert(a==b,(label or '')..' expected '..tostring(b)..', got '..tostring(a)) end
 local function total() return addon:GetCurrentEarnings().total end
 local function money(delta) wallet=wallet+delta;Event('PLAYER_MONEY') end
@@ -570,6 +593,67 @@ print('PASS: cross-realm bank identity, legacy migration, latest balance, shared
 print('PASS: appearance preset controls, saved state, live colors, default restoration, alert colors, import, font/history preservation')
 print('PASS: IRS preview, import, confirmation/cancel, source isolation, schema conversion, repeat import, invalid records, pending transfers')
 print('PASS: load order, isolated storage, net/account/character totals, adjustments, bank event orders, partial matches, late reversal, rollover, logout, chart history, navigation, fonts, stale cache and bank identity')
+''')
+
+# A library supplied by a later addon must replace the fallback exactly once.
+lua.execute(r'''
+local registrations, shows, hides = 0, 0, 0
+local launcher, iconDB, managedButton
+local library = {}
+function library:Register(name, object, db)
+    assert(name == 'IRS Lite' and object.icon:find('IRSButton'))
+    registrations = registrations + 1
+    launcher, iconDB = object, db
+    managedButton = CreateFrame('Button', 'LibDBIcon10_' .. name, Minimap)
+    managedButton:SetShown(not db.hide)
+end
+function library:Show(name)
+    assert(name == 'IRS Lite'); shows = shows + 1; managedButton:Show()
+end
+function library:Hide(name)
+    assert(name == 'IRS Lite'); hides = hides + 1; managedButton:Hide()
+end
+-- LibStub can exist before the icon library is loaded.
+LibStub = function(name, silent)
+    assert(name == 'LibDBIcon-1.0' and silent == true)
+end
+addon.db.settings.showMinimapButton=false
+Event('ADDON_LOADED', 'UnrelatedAddon')
+assert(registrations == 0 and not IRSLiteMinimapButton:IsShown())
+LibStub = function(name, silent)
+    assert(name == 'LibDBIcon-1.0' and silent == true)
+    return library
+end
+Event('ADDON_LOADED', 'SexyMap')
+assert(registrations == 1 and iconDB.hide and iconDB.minimapPos == 225)
+assert(not IRSLiteMinimapButton:IsShown() and not managedButton:IsShown())
+addon.db.settings.showMinimapButton=true
+addon:RefreshMinimapButton()
+assert(shows == 1 and managedButton:IsShown() and not iconDB.hide)
+iconDB.minimapPos = 123
+managedButton:Hide() -- A visibility manager may hide an enabled button.
+Event('ADDON_LOADED', 'AnotherAddon')
+addon:RefreshMinimapButton()
+assert(registrations == 1 and shows == 1 and not managedButton:IsShown())
+assert(iconDB.minimapPos == 123, 'preserve managed position')
+addon.db.settings.showMinimapButton=false
+addon:RefreshMinimapButton()
+assert(hides == 1 and iconDB.hide)
+addon:RefreshMinimapButton()
+assert(hides == 1)
+addon.db.settings.showMinimapButton=true
+addon:RefreshMinimapButton()
+assert(shows == 2 and not iconDB.hide and managedButton:IsShown())
+IRSLiteFrame:Hide()
+launcher.OnClick(managedButton, 'LeftButton')
+assert(IRSLiteFrame:IsShown(), 'managed left click opens Lite')
+launcher.OnClick(managedButton, 'LeftButton')
+assert(not IRSLiteFrame:IsShown(), 'managed left click closes Lite')
+launcher.OnClick(managedButton, 'RightButton')
+assert(IRSLiteFrame:IsShown(), 'managed right click opens settings')
+launcher.OnEnter(managedButton)
+launcher.OnLeave(managedButton)
+print('PASS: minimap fallback, late library registration, saved toggle/position, visibility ownership, and click/tooltip callbacks')
 ''')
 
 # Validate install assets and prevent accidentally restoring excluded feature modules.

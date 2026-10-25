@@ -8,7 +8,7 @@ on:
       release_tag:
         description: Existing release tag to rebuild
         required: true
-        default: v1.0.6
+        default: v1.0.7
         type: string
 
 permissions:

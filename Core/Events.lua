@@ -42,7 +42,11 @@ end
 events:SetScript("OnEvent", function(_, event, name)
     if event == "ADDON_LOADED" then
         IRS:InstallGuildTransferHooks()
-        if name ~= ADDON_NAME then return end
+        if name ~= ADDON_NAME then
+            -- A later addon may provide LibDBIcon after our fallback was created.
+            if IRS.RefreshMinimapButton then IRS:RefreshMinimapButton() end
+            return
+        end
         IRS:EnsureDB()
         IRS:ApplySavedFontSizes()
         IRS:ApplySavedLayoutStyle()

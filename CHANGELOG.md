@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.7
+
+- Register the minimap button with LibDBIcon when available so SexyMap can manage dragging and visibility. Preserve Lite's visibility toggle and standalone fallback button.
+- Allow dragging the standalone button around the minimap and save its position across reloads.
+
 ## 1.0.6
 
 - Allow rebuilding the existing release from Actions and replace its install ZIP instead of failing when the filename already exists.

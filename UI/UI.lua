@@ -653,6 +653,32 @@ minimapButton:SetPoint("CENTER", Minimap, "CENTER", -56, -56)
 minimapButton:SetFrameStrata("MEDIUM")
 minimapButton:SetFrameLevel(8)
 minimapButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+minimapButton:RegisterForDrag("LeftButton")
+minimapButton:EnableMouse(true)
+
+local function PositionMinimapButton(angle)
+    local radians = math.rad(angle)
+    minimapButton:ClearAllPoints()
+    minimapButton:SetPoint("CENTER", Minimap, "CENTER", math.cos(radians) * 80, math.sin(radians) * 80)
+end
+local function DragMinimapButton()
+    local x, y = GetCursorPosition()
+    local scale = Minimap:GetEffectiveScale()
+    local centerX, centerY = Minimap:GetCenter()
+    if not centerX or not centerY then return end
+    local angle = math.deg(math.atan2(y / scale - centerY, x / scale - centerX)) % 360
+    IRS.db.settings.minimap.minimapPos = angle
+    PositionMinimapButton(angle)
+end
+minimapButton:SetScript("OnDragStart", function(self)
+    GameTooltip:Hide()
+    self:SetScript("OnUpdate", DragMinimapButton)
+end)
+minimapButton:SetScript("OnDragStop", function(self)
+    self:SetScript("OnUpdate", nil)
+    DragMinimapButton()
+end)
+minimapButton:SetScript("OnHide", function(self) self:SetScript("OnUpdate", nil) end)
 
 local mapIcon = minimapButton:CreateTexture(nil, "BACKGROUND")
 mapIcon:SetTexture(MEDIA .. "IRSButton")
@@ -665,26 +691,63 @@ mapHighlight:SetBlendMode("ADD")
 mapHighlight:SetSize(36, 36)
 mapHighlight:SetPoint("CENTER", 0, 0)
 
-minimapButton:SetScript("OnClick", function(_, button)
+local function MinimapClick(_, button)
     if button == "RightButton" then
         IRS:ShowUI("settings")
     else
         IRS:ToggleUI()
     end
-end)
-minimapButton:SetScript("OnEnter", function(self)
+end
+local function MinimapEnter(self)
     GameTooltip:SetOwner(self, "ANCHOR_LEFT")
     GameTooltip:SetText("IRS Lite - Income Records System", 1.0, 0.76, 0.28)
     GameTooltip:AddLine("Left-click: open or close IRS.", 0.9, 0.88, 0.81)
     GameTooltip:AddLine("Right-click: open Settings.", 0.9, 0.88, 0.81)
+    GameTooltip:AddLine("Drag: move around the minimap.", 0.9, 0.88, 0.81)
     GameTooltip:Show()
-end)
-minimapButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
+end
+local function MinimapLeave() GameTooltip:Hide() end
+minimapButton:SetScript("OnClick", MinimapClick)
+minimapButton:SetScript("OnEnter", MinimapEnter)
+minimapButton:SetScript("OnLeave", MinimapLeave)
+
+local minimapLibrary, lastMinimapHidden
+local minimapLauncher = {
+    type = "launcher",
+    icon = MEDIA .. "IRSButton",
+    OnClick = MinimapClick,
+    OnEnter = MinimapEnter,
+    OnLeave = MinimapLeave,
+}
 
 -- Shows or hides the minimap button according to the saved Settings checkbox.
 function IRS:RefreshMinimapButton()
     if not IRS.db then IRS:EnsureDB() end
-    minimapButton:SetShown(IRS.db.settings.showMinimapButton ~= false)
+    local hidden = IRS.db.settings.showMinimapButton == false
+    IRS.db.settings.minimap = IRS.db.settings.minimap or {minimapPos = 225}
+    if not minimapLibrary and LibStub then
+        local library = LibStub("LibDBIcon-1.0", true)
+        if library then
+            -- SexyMap discovers registered icons and owns their shape, dragging,
+            -- and hover visibility. Keep its position separate from our toggle.
+            IRS.db.settings.minimap.hide = hidden
+            library:Register("IRS Lite", minimapLauncher, IRS.db.settings.minimap)
+            minimapLibrary = library
+            lastMinimapHidden = hidden
+            minimapButton:Hide()
+        end
+    end
+    if minimapLibrary then
+        IRS.db.settings.minimap.hide = hidden
+        -- Repeated refreshes must not reset SexyMap's position or hover state.
+        if hidden ~= lastMinimapHidden then
+            if hidden then minimapLibrary:Hide("IRS Lite") else minimapLibrary:Show("IRS Lite") end
+            lastMinimapHidden = hidden
+        end
+    else
+        PositionMinimapButton(IRS.db.settings.minimap.minimapPos or 225)
+        minimapButton:SetShown(not hidden)
+    end
 end
 
 

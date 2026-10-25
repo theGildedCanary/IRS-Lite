@@ -18,6 +18,8 @@ The folder and manifest must be `Interface/AddOns/IRS Lite/IRS Lite.toc`. Fully 
 
 Use `/irslite` or `/irsl` to toggle the window. Add `dashboard`, `tools`, or `settings` to open a page directly. `/irslite help` opens the manual. Left-click the minimap button to toggle Lite; right-click to open Settings. Drag the window to move it; Escape closes it.
 
+Drag the minimap button around the map to move it; its position is saved across reloads. With SexyMap enabled, the button appears as **IRS Lite** under **SexyMap > Buttons > Addon Buttons**. SexyMap controls its dragging and hover visibility; enable **Let SexyMap handle button dragging** and turn off **Lock Button Dragging** in SexyMap's Buttons settings to move it. Lite's **Show minimap button** setting still enables or disables it. Without LibDBIcon (provided by SexyMap and many other addons), Lite uses its built-in draggable button.
+
 Lite uses **IRSLiteDB**, its own account-wide SavedVariables database. To copy existing IRS history:
 
 1. Enable both **Income Records System** and **IRS Lite** in the AddOns list, then reload.
@@ -66,7 +68,7 @@ Live checks still needed: open each page, inspect fonts and the graph, toggle th
 
 The [GitHub repository](https://github.com/theGildedCanary/IRS-Lite) includes issue forms, Windows/Linux validation, and an install-package builder. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [release checklist](docs/RELEASE_CHECKLIST.md).
 
-`python scripts/package.py` creates `dist/IRS-Lite-1.0.6.zip`. The ZIP uses an explicit file list and the required `IRS Lite` install folder; tests, build dependencies, Git metadata, and saved records are excluded. Publishing a GitHub Release with a tag matching the TOC version runs validation and attaches the install package automatically.
+`python scripts/package.py` creates `dist/IRS-Lite-1.0.7.zip`. The ZIP uses an explicit file list and the required `IRS Lite` install folder; tests, build dependencies, Git metadata, and saved records are excluded. Publishing a GitHub Release with a tag matching the TOC version runs validation and attaches the install package automatically.
 
 ## License and credits
 

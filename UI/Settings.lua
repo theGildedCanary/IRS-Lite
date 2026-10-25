@@ -46,7 +46,7 @@ local check = CreateFrame("CheckButton", nil, sections.minimap, "UICheckButtonTe
 check:SetPoint("TOPLEFT", 12, -18)
 check:SetSize(28, 28)
 Text(sections.minimap, "label", 48, -22, 700, "Show minimap button")
-Text(sections.minimap, "body", 16, -70, 780, "Left-click opens or closes IRS Lite. Right-click opens Settings.")
+Text(sections.minimap, "body", 16, -70, 780, "Left-click opens or closes IRS Lite. Right-click opens Settings. Drag to move around the minimap. With SexyMap, enable button dragging and unlock it in SexyMap's Buttons settings.")
 check:SetScript("OnClick", function(self)
     IRS.db.settings.showMinimapButton = self:GetChecked() == true
     IRS:RefreshMinimapButton()
